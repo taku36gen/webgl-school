@@ -12,5 +12,5 @@ export default function page() {
     },
     false
   );
-  return <div>page</div>;
+  return <div id="webgl">page</div>;
 }

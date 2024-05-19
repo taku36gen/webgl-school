@@ -66,7 +66,7 @@ export default class ThreeApp {
    * @constructor
    * @param {HTMLElement} wrapper - canvas 要素を append する親要素
    */
-  constructor(wrapper) {
+  constructor(wrapper: any) {
     // レンダラー
     const color = new THREE.Color(ThreeApp.RENDERER_PARAM.clearColor);
     this.renderer = new THREE.WebGLRenderer();
