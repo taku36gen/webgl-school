@@ -70,13 +70,13 @@ export default class ThreeApp {
       // クラス定数の定義をクライアントサイドで行う
       ThreeApp.CAMERA_PARAM = {
         // fovy は Field of View Y のことで、縦方向の視野角を意味する
-        fovy: 60,
+        fovy: 120,
         aspect: window.innerWidth / window.innerHeight,
         // 描画する空間のニアクリップ面（最近面）
         near: 0.1,
         // 描画する空間のファークリップ面（最遠面）
-        far: 20.0,
-        position: new THREE.Vector3(0.0, 2.0, 10.0),
+        far: 80.0,
+        position: new THREE.Vector3(0.0, 0.0, 10.0),
         lookAt: new THREE.Vector3(0.0, 0.0, 0.0),
       };
       ThreeApp.RENDERER_PARAM = {
@@ -215,7 +215,7 @@ export default class ThreeApp {
         "models/DogRobot.glb",
         (gltf) => {
           const dogNum = 101;
-          const range = 30;
+          const range = 20;
           const model = gltf.scene;
           this.models.push(model);
           // モデルのスケールと位置を調整
@@ -227,7 +227,7 @@ export default class ThreeApp {
             const x = Math.random() * range - range / 2;
             const y = Math.random() * range - range / 2;
             const z = Math.random() * range - range / 2;
-            clone.position.set(x, y, z);
+            clone.position.set(x, 0, z);
             this.models.push(clone);
           }
 
