@@ -2,6 +2,7 @@
 
 import ThreeApp from "./ThreeApp";
 import { useEffect } from "react";
+import React from "react";
 
 export default function Page() {
   useEffect(() => {
@@ -16,10 +17,23 @@ export default function Page() {
         const app = new ThreeApp(wrapper);
         app.render();
       }
-
       // },
       //     false
       //   );
+
+      /**
+       * NOTE: クリーンアップ関数
+       * この関数は、コンポーネントがアンマウントされる際や、
+       * useEffectの依存関係が変わる前に実行される
+       * これを行わないと、再レンダリングのたびに新しいcanvas要素が追加され続けてしまう
+       */
+      return () => {
+        if (wrapper) {
+          while (wrapper.firstChild) {
+            wrapper.removeChild(wrapper.firstChild);
+          }
+        }
+      };
     }
   }, []);
   return <div id="webgl"></div>;

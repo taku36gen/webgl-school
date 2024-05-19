@@ -2,6 +2,8 @@
 
 import * as THREE from "three";
 import { OrbitControls } from "three/examples/jsm/controls/OrbitControls.js";
+import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader.js";
+import { DRACOLoader } from "three/examples/jsm/loaders/DRACOLoader.js";
 
 export default class ThreeApp {
   static CAMERA_PARAM:
@@ -50,11 +52,13 @@ export default class ThreeApp {
   directionalLight: THREE.DirectionalLight | undefined;
   ambientLight: THREE.AmbientLight | undefined;
   material: THREE.MeshPhongMaterial | undefined;
-  torusGeometry: THREE.TorusGeometry | undefined;
-  torusArray: THREE.Mesh[] = [];
+  Geometry: THREE.BufferGeometry | undefined;
+  meshArray: THREE.Mesh[] = [];
   controls: OrbitControls | undefined;
   axesHelper: THREE.AxesHelper | undefined;
+  initialPositions: [number, number, number][] | undefined;
   isDown = false;
+  models: THREE.Object3D[] = [];
 
   /**
    * コンストラクタ
@@ -76,7 +80,7 @@ export default class ThreeApp {
         lookAt: new THREE.Vector3(0.0, 0.0, 0.0),
       };
       ThreeApp.RENDERER_PARAM = {
-        clearColor: 0x666666,
+        clearColor: 0x8dedbd,
         width: window.innerWidth,
         height: window.innerHeight,
       };
@@ -90,7 +94,7 @@ export default class ThreeApp {
         intensity: 0.1,
       };
       ThreeApp.MATERIAL_PARAM = {
-        color: 0x3399ff,
+        color: 0xfae9cd,
       };
 
       // レンダラー
@@ -137,21 +141,54 @@ export default class ThreeApp {
       this.material = new THREE.MeshPhongMaterial(ThreeApp.MATERIAL_PARAM);
 
       // 共通のジオメトリ、マテリアルから、複数のメッシュインスタンスを作成する @@@
-      const torusCount = 10;
+      const meshCount = 125;
       const transformScale = 5.0;
-      this.torusGeometry = new THREE.TorusGeometry(0.5, 0.2, 8, 16);
-      this.torusArray = [];
-      for (let i = 0; i < torusCount; ++i) {
-        // トーラスメッシュのインスタンスを生成
-        const torus = new THREE.Mesh(this.torusGeometry, this.material);
-        // 座標をランダムに散らす
-        torus.position.x = (Math.random() * 2.0 - 1.0) * transformScale;
-        torus.position.y = (Math.random() * 2.0 - 1.0) * transformScale;
-        torus.position.z = (Math.random() * 2.0 - 1.0) * transformScale;
-        // シーンに追加する
-        this.scene.add(torus);
-        // 配列に入れておく
-        this.torusArray.push(torus);
+      this.Geometry = new THREE.BoxGeometry(0.1, 0.1, 0.1);
+      this.meshArray = [];
+      this.initialPositions = [];
+
+      // メッシュの初期位置を定義
+      // 球状に配置するとき
+      // const radius = 5;
+      // for (let i = 0; i < meshCount; i++) {
+      //   const theta = Math.random() * Math.PI * 2;
+      //   const phi = Math.acos(2 * Math.random() - 1);
+
+      //   const x = radius * Math.sin(phi) * Math.cos(theta);
+      //   const y = radius * Math.sin(phi) * Math.sin(theta);
+      //   const z = radius * Math.cos(phi);
+
+      //   this.initialPositions?.push([x, y, z]);
+      // }
+
+      // グリッド状に配置
+      const gridSize = 5;
+      const spacing = 0.2;
+      for (let i = 0; i < gridSize; i++) {
+        for (let j = 0; j < gridSize; j++) {
+          for (let k = 0; k < gridSize; k++) {
+            const x = i * spacing + (Math.random() - 0.5) * spacing;
+            const y = j * spacing + (Math.random() - 0.5) * spacing;
+            const z = k * spacing + (Math.random() - 0.5) * spacing;
+            this.initialPositions?.push([x, y, z]);
+          }
+        }
+      }
+
+      // メッシュを連続生成
+      if (this.initialPositions) {
+        for (let i = 0; i < meshCount; ++i) {
+          // トーラスメッシュのインスタンスを生成
+          const torus = new THREE.Mesh(this.Geometry, this.material);
+          // 座標をランダムに散らす
+          torus.position.x = this.initialPositions[i][0];
+          torus.position.y = this.initialPositions[i][1];
+          torus.position.z = this.initialPositions[i][2];
+          // シーンに追加する
+          // this.scene.add(torus);
+          // 配列に入れておく
+          this.meshArray.push(torus);
+        }
       }
 
       // 軸ヘルパー
@@ -164,6 +201,50 @@ export default class ThreeApp {
 
       // this のバインド
       this.render = this.render.bind(this);
+
+      /*
+       * 3Dモデルを読み込む
+       *
+       *
+       */
+      // モデル読み込みローダー
+      const loader = new GLTFLoader();
+
+      // モデルをロードし、シーンに追加
+      loader.load(
+        "models/DogRobot.glb",
+        (gltf) => {
+          const dogNum = 101;
+          const range = 30;
+          const model = gltf.scene;
+          this.models.push(model);
+          // モデルのスケールと位置を調整
+          model.scale.set(0.2, 0.2, 0.2);
+          model.position.set(0, 0, 0);
+
+          for (let i = 1; i <= dogNum; i++) {
+            const clone = model.clone();
+            const x = Math.random() * range - range / 2;
+            const y = Math.random() * range - range / 2;
+            const z = Math.random() * range - range / 2;
+            clone.position.set(x, y, z);
+            this.models.push(clone);
+          }
+
+          if (this.scene) {
+            for (let i = 1; i <= dogNum; i++) {
+              this.scene.add(this.models[i]);
+            }
+          }
+
+          // モデルの読み込みが完了してから、レンダリングループを開始
+          this.render();
+        },
+        undefined,
+        (error) => {
+          console.error("An error happened", error);
+        }
+      );
 
       // キーの押下状態を保持するフラグ
       this.isDown = false;
@@ -218,7 +299,7 @@ export default class ThreeApp {
       // フラグに応じてオブジェクトの状態を変化させる
       if (this.isDown === true) {
         // Y 軸回転 @@@
-        this.torusArray.forEach((torus) => {
+        this.meshArray.forEach((torus) => {
           torus.rotation.y += 0.05;
         });
       }
