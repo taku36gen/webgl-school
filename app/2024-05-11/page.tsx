@@ -1,10 +1,13 @@
 "use client";
 
 import ThreeApp from "./ThreeApp";
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 import React from "react";
+import styles from "./page.module.css";
 
 export default function Page() {
+  const threeAppRef = useRef<ThreeApp | null>(null);
+
   useEffect(() => {
     if (typeof window !== "undefined") {
       //  useEffect内は既にDOMのロードが完了しているため、
@@ -15,6 +18,7 @@ export default function Page() {
       const wrapper = document.querySelector("#webgl");
       if (wrapper) {
         const app = new ThreeApp(wrapper);
+        threeAppRef.current = app;
         app.render();
       }
       // },
@@ -36,5 +40,39 @@ export default function Page() {
       };
     }
   }, []);
-  return <div id="webgl"></div>;
+
+  const handleGatherButtonClick = (
+    event: React.MouseEvent<HTMLButtonElement>
+  ) => {
+    event.preventDefault();
+    if (threeAppRef.current) {
+      threeAppRef.current.resetDogsPosition();
+    }
+  };
+
+  return (
+    <div style={{ position: "relative" }}>
+      <div id="webgl"></div>
+      <div
+        className={styles["darumadrop-one-regular"]}
+        style={{
+          position: "absolute",
+          top: "10px",
+          left: "10px",
+          color: "#a0b966",
+          // backgroundColor: "rgba(0, 0, 0, 0.5)",
+          padding: "5px",
+          zIndex: 1,
+        }}
+      >
+        Press the space key to make 101 puppies run!
+      </div>
+      <button
+        className={styles.gatherButton}
+        onMouseDown={handleGatherButtonClick}
+      >
+        Come!
+      </button>
+    </div>
+  );
 }

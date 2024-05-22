@@ -1,0 +1,42 @@
+.darumadrop-one-regular {
+  font-family: "Darumadrop One", sans-serif;
+  font-weight: 400;
+  font-style: normal;
+  font-size: 48px;
+}
+
+.gatherButton {
+  position: absolute;
+  bottom: 20px;
+  right: 20px;
+  background-color: #fff;
+  border: none;
+  width: 120px;
+  height: 120px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  cursor: pointer;
+  font-family: "Darumadrop One", sans-serif;
+  font-weight: 400;
+  font-style: normal;
+  font-size: 36px;
+  color: #333;
+  z-index: 1;
+  border-radius: 50%;
+  background-image: linear-gradient(to bottom, #ffffff, #f0f0f0);
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+  transition: all 0.3s ease;
+}
+
+.gatherButton:hover {
+  background-image: linear-gradient(to bottom, #f0f0f0, #e0e0e0);
+  transform: translateY(-2px);
+  box-shadow: 0 6px 8px rgba(0, 0, 0, 0.15);
+}
+
+.gatherButton:active {
+  background-image: linear-gradient(to bottom, #e0e0e0, #d0d0d0);
+  transform: translateY(0);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}

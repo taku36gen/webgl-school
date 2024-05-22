@@ -60,6 +60,8 @@ export default class ThreeApp {
   isDown = false;
   models: THREE.Object3D[] = [];
 
+  previousPosition = new THREE.Vector3();
+
   /**
    * コンストラクタ
    * @constructor
@@ -76,7 +78,7 @@ export default class ThreeApp {
         near: 0.1,
         // 描画する空間のファークリップ面（最遠面）
         far: 80.0,
-        position: new THREE.Vector3(0.0, 0.0, 10.0),
+        position: new THREE.Vector3(4.8, 1.6, 9.1),
         lookAt: new THREE.Vector3(0.0, 0.0, 0.0),
       };
       ThreeApp.RENDERER_PARAM = {
@@ -119,6 +121,7 @@ export default class ThreeApp {
       );
       this.camera.position.copy(ThreeApp.CAMERA_PARAM.position);
       this.camera.lookAt(ThreeApp.CAMERA_PARAM.lookAt);
+      this.camera.getWorldPosition(this.previousPosition);
 
       // ディレクショナルライト（平行光源）
       this.directionalLight = new THREE.DirectionalLight(
@@ -162,34 +165,58 @@ export default class ThreeApp {
       // }
 
       // グリッド状に配置
-      const gridSize = 5;
-      const spacing = 0.2;
-      for (let i = 0; i < gridSize; i++) {
-        for (let j = 0; j < gridSize; j++) {
-          for (let k = 0; k < gridSize; k++) {
-            const x = i * spacing + (Math.random() - 0.5) * spacing;
-            const y = j * spacing + (Math.random() - 0.5) * spacing;
-            const z = k * spacing + (Math.random() - 0.5) * spacing;
-            this.initialPositions?.push([x, y, z]);
-          }
-        }
-      }
+      // const gridSize = 5;
+      // const spacing = 0.2;
+      // for (let i = 0; i < gridSize; i++) {
+      //   for (let j = 0; j < gridSize; j++) {
+      //     for (let k = 0; k < gridSize; k++) {
+      //       const x = i * spacing + (Math.random() - 0.5) * spacing;
+      //       const y = j * spacing + (Math.random() - 0.5) * spacing;
+      //       const z = k * spacing + (Math.random() - 0.5) * spacing;
+      //       this.initialPositions?.push([x, y, z]);
+      //     }
+      //   }
+      // }
 
       // メッシュを連続生成
-      if (this.initialPositions) {
-        for (let i = 0; i < meshCount; ++i) {
-          // トーラスメッシュのインスタンスを生成
-          const torus = new THREE.Mesh(this.Geometry, this.material);
-          // 座標をランダムに散らす
-          torus.position.x = this.initialPositions[i][0];
-          torus.position.y = this.initialPositions[i][1];
-          torus.position.z = this.initialPositions[i][2];
-          // シーンに追加する
-          // this.scene.add(torus);
-          // 配列に入れておく
-          this.meshArray.push(torus);
-        }
-      }
+      // if (this.initialPositions) {
+      //   for (let i = 0; i < meshCount; ++i) {
+      //     // トーラスメッシュのインスタンスを生成
+      //     const torus = new THREE.Mesh(this.Geometry, this.material);
+      //     // 座標をランダムに散らす
+      //     torus.position.x = this.initialPositions[i][0];
+      //     torus.position.y = this.initialPositions[i][1];
+      //     torus.position.z = this.initialPositions[i][2];
+      //     // シーンに追加する
+      //     // this.scene.add(torus);
+      //     // 配列に入れておく
+      //     this.meshArray.push(torus);
+      //   }
+      // }
+
+      // テクスチャの読み込み
+      const textureLoader = new THREE.TextureLoader();
+      const grassTexture = textureLoader.load("grass2.jpg");
+      // 平面ジオメトリの作成
+      const planeGeometry = new THREE.PlaneGeometry(100, 100);
+      // マテリアルの作成とテクスチャの設定
+      const planeMaterial = new THREE.MeshBasicMaterial({
+        map: grassTexture,
+        side: THREE.DoubleSide,
+      });
+      // 平面メッシュの作成
+      const planeMesh = new THREE.Mesh(planeGeometry, planeMaterial);
+      // 平面をXZ平面に配置するための回転
+      planeMesh.rotation.x = -Math.PI / 2;
+      // 平面のy軸高さを設定
+      const height = -1; // 高さを1に設定
+      planeMesh.position.y = height;
+      // シーンに平面メッシュを追加
+      this.scene.add(planeMesh);
+
+      const skyTexture = textureLoader.load("sky2.jpg");
+      // 背景にテクスチャを設定
+      this.scene.background = skyTexture;
 
       // 軸ヘルパー
       const axesBarLength = 5.0;
@@ -212,15 +239,18 @@ export default class ThreeApp {
 
       // モデルをロードし、シーンに追加
       loader.load(
-        "models/DogRobot.glb",
+        "models/goldenRetriever.glb",
         (gltf) => {
           const dogNum = 101;
-          const range = 20;
+          const range = 30;
           const model = gltf.scene;
           this.models.push(model);
           // モデルのスケールと位置を調整
-          model.scale.set(0.2, 0.2, 0.2);
+          const scale = 0.15;
+          model.scale.set(scale, scale, scale);
           model.position.set(0, 0, 0);
+          this.initialPositions?.push([0, 0, 0]);
+          model.userData.initialPosition = new THREE.Vector3(0, 0, 0);
 
           for (let i = 1; i <= dogNum; i++) {
             const clone = model.clone();
@@ -228,6 +258,13 @@ export default class ThreeApp {
             const y = Math.random() * range - range / 2;
             const z = Math.random() * range - range / 2;
             clone.position.set(x, 0, z);
+            this.initialPositions?.push([x, y, z]);
+            clone.userData.initialPosition = new THREE.Vector3(x, 0, z);
+
+            // 犬の向きをランダムに設定
+            const randomRotation = Math.random() * Math.PI * 2; // 0から2πまでのランダムな角度
+            clone.rotation.y = randomRotation;
+
             this.models.push(clone);
           }
 
@@ -293,19 +330,93 @@ export default class ThreeApp {
       // 恒常ループの設定
       requestAnimationFrame(this.render);
 
+      this.displayCameraInfo();
+
       // コントロールを更新
       this.controls.update();
 
       // フラグに応じてオブジェクトの状態を変化させる
       if (this.isDown === true) {
         // Y 軸回転 @@@
-        this.meshArray.forEach((torus) => {
-          torus.rotation.y += 0.05;
-        });
+        // this.meshArray.forEach((torus) => {
+        //   torus.rotation.y += 0.05;
+        // });
+        for (let i = 1; i < this.models.length; i++) {
+          const dog = this.models[i];
+          if (dog) {
+            // 犬の現在の向きを取得
+            const dogDirection = new THREE.Vector3();
+            dog.getWorldDirection(dogDirection);
+
+            // 犬の顔の向きを基準に、90度回転させたベクトルを計算
+            const facingDirection = new THREE.Vector3();
+            facingDirection
+              .copy(dogDirection)
+              .applyAxisAngle(new THREE.Vector3(0, 1, 0), -Math.PI / 2);
+
+            // 犬の顔の向きを基準に、少し曲がるような方向ベクトルを生成
+            const randomAngle = ((Math.random() - 0.5) * Math.PI) / 6; // -30度から30度の範囲
+            const randomDirection = new THREE.Vector3(
+              Math.sin(randomAngle),
+              0,
+              Math.cos(randomAngle)
+            );
+            randomDirection.applyQuaternion(
+              new THREE.Quaternion().setFromUnitVectors(
+                new THREE.Vector3(0, 0, 1),
+                facingDirection
+              )
+            );
+
+            // 移動速度を設定
+            const moveSpeed = 0.005;
+
+            /// 犬の位置を更新
+            dog.position.add(randomDirection.multiplyScalar(moveSpeed));
+
+            // 犬の上下の位置を周期的に変化させる
+            dog.position.y = Math.sin(Date.now() * 0.01) * 0.1;
+          }
+        }
       }
 
       // レンダラーで描画
       this.renderer.render(this.scene, this.camera);
+    }
+  }
+
+  // カメラの位置と向きを表示する関数
+  displayCameraInfo() {
+    if (this.camera && this.controls) {
+      const currentPosition = new THREE.Vector3();
+      this.camera.getWorldPosition(currentPosition);
+
+      if (!currentPosition.equals(this.previousPosition)) {
+        const target = this.controls.target;
+
+        console.log("Camera Position:");
+        console.log("  x:", currentPosition.x);
+        console.log("  y:", currentPosition.y);
+        console.log("  z:", currentPosition.z);
+
+        console.log("Camera LookAt:");
+        console.log("  x:", target.x);
+        console.log("  y:", target.y);
+        console.log("  z:", target.z);
+
+        this.previousPosition.copy(currentPosition);
+      }
+    }
+  }
+
+  resetDogsPosition() {
+    for (let i = 1; i < this.models.length; i++) {
+      const dog = this.models[i];
+      dog.position.set(
+        dog.userData.initialPosition.x,
+        dog.userData.initialPosition.y,
+        dog.userData.initialPosition.z
+      );
     }
   }
 }
