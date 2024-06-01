@@ -7,6 +7,7 @@ import styles from "./page.module.css";
 
 export default function Page() {
   const threeAppRef = useRef<ThreeApp | null>(null);
+  const yoo = 0;
 
   useEffect(() => {
     if (typeof window !== "undefined") {
