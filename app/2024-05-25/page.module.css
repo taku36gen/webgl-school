@@ -1,0 +1,56 @@
+.controllerWrapper {
+  --controller-width: 30vw;
+  --controller-height: 14vh;
+  --button-size: 5vw;
+  --font-size: 2vw;
+  --controller-padding: 2vh; /* 新しい変数を追加 */
+}
+
+.controller {
+  position: fixed;
+  left: 50%;
+  bottom: 20vh;
+  transform: translateX(-50%);
+  width: var(--controller-width);
+  height: var(--controller-height);
+  padding: var(--controller-padding); /* パディングを変数で設定 */
+  font-size: var(--font-size);
+  border-radius: 1vw;
+  background-color: #dba3c2;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1), 0 100px 150px rgba(0, 0, 0, 0.05);
+  transition: all 0.3s ease;
+}
+
+.buttonRow {
+  display: flex;
+  justify-content: space-around;
+  width: 100%;
+  height: 100%;
+  align-items: center;
+}
+
+.button {
+  width: var(--button-size);
+  height: var(--button-size);
+  font-size: calc(var(--font-size) * 0.8);
+  border-radius: 0.5vw;
+  border: none;
+  color: #333;
+  cursor: pointer;
+  background-color: #f5e8ee;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+  transition: all 0.1s ease;
+}
+
+.button:active {
+  transform: translateY(2px);
+  box-shadow: 0 2px 3px rgba(0, 0, 0, 0.1);
+}
+
+.power {
+  background-color: #ff9999;
+}
