@@ -36,18 +36,18 @@ export default class ThreeApp {
    */
   static PLANE_GEOM_PARAM = {
     radiusTop: 0,
-    radiusBottom: 1,
-    height: 2,
+    radiusBottom: 2,
+    height: 4,
   };
   static PLANE_MAT_PARAM = {
-    color: "#2c6512",
+    color: 0xffffff,
   };
   static DISTANDE_FROM_SPHERE = 6;
   /**
    * 球体オブジェクトパラメータ
    */
   static SPHER_GEOM_PARAM = {
-    radius: 3,
+    radius: 5,
     widthSegments: 64,
     heightSegments: 32,
   };
@@ -74,19 +74,11 @@ export default class ThreeApp {
   planeMaterial: THREE.MeshPhongMaterial | undefined;
   planeGeometry: THREE.BufferGeometry | undefined;
   planeMesh: THREE.Mesh | undefined;
-  planePreviousDirection: THREE.Vector3 | undefined;
-  planeCurrentDirection: THREE.Vector3 | undefined;
-  planeArrowHelper: THREE.ArrowHelper | undefined;
   // 飛行機とカメラを一体として扱うためのグループ
   planeCameraGroup: THREE.Group | undefined;
   startAngle: number | undefined;
   rotationAngle: number = 0;
   rotationSpeed: number = 0.5;
-  // lookAtではなくクオータニォンで制御するための変数
-  groupPreviousPosition: THREE.Vector3 | undefined;
-  groupNextPosition: THREE.Vector3 | undefined;
-  groupPreviousDirection: THREE.Vector3 | undefined;
-  groupCurrentDirection: THREE.Vector3 | undefined;
   // 飛行機の位置制御のための値
   // planePrevPos:THREE.Vector3 | undefined;
   // 球体
@@ -165,23 +157,24 @@ export default class ThreeApp {
       this.planeMesh = new THREE.Mesh(this.planeGeometry, this.planeMaterial);
       // グループ化
       // 飛行機の初期位置を設定
-      this.planeMesh.position.set(0, 0, ThreeApp.DISTANDE_FROM_SPHERE); // グループ内での相対位置
+      this.planeMesh.position.set(0, 0, 0); // グループ内での相対位置
       // 飛行機の向き
       this.planeMesh.rotation.x = -Math.PI;
       this.addAxesHelper(this.planeMesh, 5);
-      this.planeCurrentDirection = new THREE.Vector3(0.0, 1.0, 0).normalize();
-      // 飛行機の向きベクトルデバッグ用
-      this.planeArrowHelper = new THREE.ArrowHelper(
-        this.planeCurrentDirection,
-        this.planeMesh.position,
-        10,
-        0xff0029
-      );
-      this.scene.add(this.planeArrowHelper);
       // ★飛行機に対するカメラの位置
-      this.camera.position.set(0, 0, 12); // 飛行機より後ろ、少し上に
-      this.scene.add(this.planeMesh);
-      this.scene.add(this.camera);
+      this.camera.position.set(0, 0, -10); // 飛行機より後ろ、少し上に
+      // 原点を注視点にすると、物体が注視点ではなくなる
+      // this.camera.lookAt(0, 0, 0);
+      // しかし、ここで指定しても、半回転ごとに視点の切り替えが発生してしまう（向きが一定なことが影響？）
+      // this.camera.lookAt(this.planeMesh.position);
+      // カメラとグループ化する
+      this.planeCameraGroup = new THREE.Group();
+      this.planeCameraGroup.add(this.planeMesh);
+      this.planeCameraGroup.add(this.camera);
+      // グループの初期位置を設定
+      this.planeCameraGroup.position.set(0, 0, -ThreeApp.DISTANDE_FROM_SPHERE);
+      this.scene.add(this.planeCameraGroup);
+      this.addAxesHelper(this.planeCameraGroup, 100);
 
       /**
        * 球体の作成
@@ -219,7 +212,7 @@ export default class ThreeApp {
       this.controls = new OrbitControls(this.camera, this.renderer.domElement);
 
       // Clock オブジェクトの生成 @@@
-      if (this.planeMesh) {
+      if (this.planeCameraGroup) {
         this.clock = new THREE.Clock();
       }
 
@@ -251,11 +244,8 @@ export default class ThreeApp {
       this.camera &&
       this.controls &&
       this.clock &&
-      // this.planeCameraGroup &&
-      this.planeMesh &&
-      // this.groupCurrentDirection
-      this.planeCurrentDirection &&
-      this.planeArrowHelper
+      this.planeCameraGroup &&
+      this.planeMesh
     ) {
       // 恒常ループの設定
       requestAnimationFrame(this.render);
@@ -271,60 +261,48 @@ export default class ThreeApp {
       // 回転角度を更新
       this.rotationAngle += this.rotationSpeed * deltaTime;
 
-      // 現在の位置を保存
-      const previousPosition = this.planeMesh.position.clone();
-      const previousDirection = this.planeCurrentDirection;
-      previousDirection.normalize();
+      //新しい位置を計算（初期位置が(0, 0, DISTANCE)であることを考慮）
+      const y = Math.sin(this.rotationAngle) * ThreeApp.DISTANDE_FROM_SPHERE;
+      const z = Math.cos(this.rotationAngle) * ThreeApp.DISTANDE_FROM_SPHERE;
 
-      // 新しい位置を計算（球面上の点）
-      const newPosition = new THREE.Vector3(
-        Math.sin(this.rotationAngle) * ThreeApp.DISTANDE_FROM_SPHERE,
-        Math.sin(this.rotationAngle / 2) * ThreeApp.DISTANDE_FROM_SPHERE,
-        Math.cos(this.rotationAngle) * ThreeApp.DISTANDE_FROM_SPHERE
-      );
-      // console.log(newPosition);
+      this.planeCameraGroup.position.set(0, y, z);
+      this.planeCameraGroup.lookAt(0, 0, 0);
 
-      // 移動ベクトルを計算
-      const moveVector = new THREE.Vector3().subVectors(
-        newPosition,
-        previousPosition
-      );
-
-      // 現在の進行方向を更新
-      console.log(this.planeCurrentDirection);
-      this.planeCurrentDirection.copy(moveVector);
-      console.log(this.planeCurrentDirection);
-      this.planeCurrentDirection.normalize();
-
-      // 新しい位置に移動
-      this.planeMesh.position.copy(newPosition);
-
-      // (C) 変換前と変換後の２つのベクトルから外積で法線ベクトルを求める @@@
-      const normalAxis = new THREE.Vector3().crossVectors(
-        previousDirection,
-        this.planeCurrentDirection
-      );
-      normalAxis.normalize();
-      // (D) 変換前と変換後のふたつのベクトルから内積でコサインを取り出す
-      const cos = previousDirection.dot(this.planeCurrentDirection);
-      // (D) コサインをラジアンに戻す
-      const radians = Math.acos(cos);
-      console.log(cos);
-
-      // 求めた法線ベクトルとラジアンからクォータニオンを定義
-      const qtn = new THREE.Quaternion().setFromAxisAngle(normalAxis, radians);
-      // 人工衛星の現在のクォータニオンに乗算する
-      // this.planeMesh.up.set(
-      //   this.planeCurrentDirection.x,
-      //   this.planeCurrentDirection.y,
-      //   this.planeCurrentDirection.z
+      // console.log(
+      //   "Camera Position:",
+      //   "x:",
+      //   this.camera.position.x,
+      //   "y:",
+      //   this.camera.position.y,
+      //   "z:",
+      //   this.camera.position.z
       // );
-      // this.planeMesh.quaternion.premultiply(qtn);
+      let direction = new THREE.Vector3();
+      this.camera.getWorldDirection(direction);
+      // console.log(
+      //   "Camera Direction:",
+      //   "x:",
+      //   direction.x,
+      //   "y:",
+      //   direction.y,
+      //   "z:",
+      //   direction.z
+      // );
 
-      // 飛行機の向きベクトルデバッグ用
-      // planeArrowHelperの更新
-      this.planeArrowHelper.position.copy(this.planeMesh.position);
-      this.planeArrowHelper.setDirection(this.planeCurrentDirection);
+      direction = new THREE.Vector3();
+      this.planeCameraGroup.getWorldDirection(direction);
+      console.log(
+        "Group Direction:",
+        "x:",
+        direction.x,
+        "y:",
+        direction.y,
+        "z:",
+        direction.z
+      );
+
+      // 上方向を設定（進行方向を維持）
+      //　this.planeCameraGroup.up.set(1, 0, 0);
 
       // レンダラーで描画
       this.renderer.render(this.scene, this.camera);
