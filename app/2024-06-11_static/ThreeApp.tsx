@@ -167,7 +167,7 @@ export default class ThreeApp {
       // 飛行機の初期位置を設定
       this.planeMesh.position.set(0, 0, ThreeApp.DISTANDE_FROM_SPHERE); // グループ内での相対位置
       // 飛行機の向き
-      this.planeMesh.rotation.x = -Math.PI;
+      this.planeMesh.rotation.x = -Math.PI * 0;
       this.addAxesHelper(this.planeMesh, 5);
       this.planeCurrentDirection = new THREE.Vector3(0.0, 1.0, 0).normalize();
       // 飛行機の向きベクトルデバッグ用
@@ -273,7 +273,7 @@ export default class ThreeApp {
 
       // 現在の位置を保存
       const previousPosition = this.planeMesh.position.clone();
-      const previousDirection = this.planeCurrentDirection;
+      const previousDirection = this.planeCurrentDirection.clone();
       previousDirection.normalize();
 
       // 新しい位置を計算（球面上の点）
@@ -282,44 +282,48 @@ export default class ThreeApp {
         Math.sin(this.rotationAngle / 2) * ThreeApp.DISTANDE_FROM_SPHERE,
         Math.cos(this.rotationAngle) * ThreeApp.DISTANDE_FROM_SPHERE
       );
-      // console.log(newPosition);
 
       // 移動ベクトルを計算
       const moveVector = new THREE.Vector3().subVectors(
         newPosition,
         previousPosition
       );
+      moveVector.multiplyScalar(10); // スケールを調整
 
       // 現在の進行方向を更新
-      console.log(this.planeCurrentDirection);
-      this.planeCurrentDirection.copy(moveVector);
-      console.log(this.planeCurrentDirection);
+      // this.planeCurrentDirection.copy(moveVector);
+      this.planeCurrentDirection.copy(
+        new THREE.Vector3(0.2, 0.3, 0.4).normalize()
+      );
       this.planeCurrentDirection.normalize();
 
       // 新しい位置に移動
-      this.planeMesh.position.copy(newPosition);
-
+      // this.planeMesh.position.copy(newPosition);
       // (C) 変換前と変換後の２つのベクトルから外積で法線ベクトルを求める @@@
       const normalAxis = new THREE.Vector3().crossVectors(
-        previousDirection,
+        this.planeMesh.up,
         this.planeCurrentDirection
       );
       normalAxis.normalize();
       // (D) 変換前と変換後のふたつのベクトルから内積でコサインを取り出す
-      const cos = previousDirection.dot(this.planeCurrentDirection);
+      const cos = this.planeMesh.up.dot(this.planeCurrentDirection);
       // (D) コサインをラジアンに戻す
       const radians = Math.acos(cos);
-      console.log(cos);
+      let degree = radians * (180 / Math.PI);
+      console.log(degree);
 
       // 求めた法線ベクトルとラジアンからクォータニオンを定義
       const qtn = new THREE.Quaternion().setFromAxisAngle(normalAxis, radians);
       // 人工衛星の現在のクォータニオンに乗算する
-      // this.planeMesh.up.set(
-      //   this.planeCurrentDirection.x,
-      //   this.planeCurrentDirection.y,
-      //   this.planeCurrentDirection.z
-      // );
-      // this.planeMesh.quaternion.premultiply(qtn);
+      // console.log(this.planeMesh.quaternion);
+      this.planeMesh.quaternion.premultiply(qtn);
+      // console.log(this.planeMesh.up);
+      this.planeMesh.up.set(
+        this.planeCurrentDirection.x,
+        this.planeCurrentDirection.y,
+        this.planeCurrentDirection.z
+      );
+      // console.log(this.planeMesh.up);
 
       // 飛行機の向きベクトルデバッグ用
       // planeArrowHelperの更新
