@@ -199,7 +199,7 @@ export default class ThreeApp {
       this.scene.add(worldAxes);
 
       // コントロール
-      this.controls = new OrbitControls(this.camera, this.renderer.domElement);
+      // this.controls = new OrbitControls(this.camera, this.renderer.domElement);
 
       /**
        * 板ポリゴンの作成
