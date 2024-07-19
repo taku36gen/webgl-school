@@ -7,7 +7,6 @@ import styles from "./page.module.css";
 
 export default function Page() {
   const threeAppRef = useRef<ThreeApp | null>(null);
-
   const [selectedIndex, setSelectedIndex] = useState<number | null>(null);
 
   useEffect(() => {

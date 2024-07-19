@@ -110,8 +110,8 @@ export default class ThreeApp {
   models: THREE.Object3D[] = [];
   clock: THREE.Clock | undefined;
   raycaster: THREE.Raycaster = new THREE.Raycaster();
-  intersects!: any[]; // 可変長配列の空配列の定義方法
-  isOn: boolean = true;
+  touchStartY: number = 0;
+  scrollSensitivity: number = 0.1;
   windowOrient: string = "";
   /**
    * 板ポリゴン
@@ -124,7 +124,9 @@ export default class ThreeApp {
   planeArrowHelpers: THREE.Group = new THREE.Group();
   initialPositions: THREE.Vector3[] = [];
   planesRadius: number = 1;
-  planesRotationAngle: number = 0;
+  planeRotationAngle: number = 0;
+  intersects!: any[]; // 可変長配列の空配列の定義方法
+  planeIntersected: boolean = false;
   // 選択中のアルバムのインデックスを保持するための関数プロパティ
   // 関数自体はクラスの呼び出し元で定義しこのクラスに渡される。ここではその型定義のみしている
   // (index: number | null): この関数は引数として number または null 型の index を1つ受け取ります。
@@ -197,7 +199,7 @@ export default class ThreeApp {
       this.scene.add(worldAxes);
 
       // コントロール
-      // this.controls = new OrbitControls(this.camera, this.renderer.domElement);
+      this.controls = new OrbitControls(this.camera, this.renderer.domElement);
 
       /**
        * 板ポリゴンの作成
@@ -282,13 +284,17 @@ export default class ThreeApp {
             // クラスの呼び出し元から渡される関数を使用
             // &&で繋げているのは、関数の存在確認と関数の実行を同時に行なっている
             this.onIntersect && this.onIntersect(intersectIndex);
+            this.planeIntersected = true;
           } else {
             this.onIntersect && this.onIntersect(null);
+            this.planeIntersected = false;
             console.log("not intersected.");
           }
         },
         false
       );
+
+      this.setupScrollEventListeners();
     }
   }
 
@@ -332,6 +338,34 @@ export default class ThreeApp {
       // レンダラーで描画
       this.renderer.render(this.scene, this.camera);
     }
+  }
+  private setupScrollEventListeners() {
+    window.addEventListener("wheel", this.handleWheel.bind(this), {
+      passive: false,
+    });
+    window.addEventListener("touchstart", this.handleTouchStart.bind(this));
+    window.addEventListener("touchmove", this.handleTouchMove.bind(this));
+  }
+
+  private handleWheel(e: WheelEvent) {
+    e.preventDefault();
+    if (this.planeIntersected) {
+      this.planeRotationAngle += e.deltaY * this.scrollSensitivity;
+      this.updatePlanesPosition();
+    }
+  }
+
+  private handleTouchStart(e: TouchEvent) {
+    this.touchStartY = e.touches[0].clientY;
+  }
+
+  private handleTouchMove(e: TouchEvent) {
+    if (this.touchStartY === null || !this.planeIntersected) return;
+    const touchY = e.touches[0].clientY;
+    const deltaY = this.touchStartY - touchY;
+    this.planeRotationAngle += deltaY * this.scrollSensitivity;
+    this.touchStartY = touchY;
+    this.updatePlanesPosition();
   }
 
   // カメラの位置と向きを表示する関数
@@ -387,9 +421,9 @@ export default class ThreeApp {
       onUpdate: (self) => {
         // スクロール量に基づいて回転角度を計算
         const progress = self.progress;
-        this.planesRotationAngle = progress * Math.PI * 2; // 1回転
+        this.planeRotationAngle = progress * Math.PI * 2; // 1回転
         console.log("Scroll progress:", progress); // デバッグ用
-        console.log("Rotation angle:", this.planesRotationAngle); // デバッグ用
+        console.log("Rotation angle:", this.planeRotationAngle); // デバッグ用
         // プレーンの位置を更新
         this.updatePlanesPosition();
       },
@@ -401,18 +435,20 @@ export default class ThreeApp {
       const initialPosition = this.initialPositions[index];
       const movedPosition = this.rotationPlanesByOrient(
         initialPosition,
-        this.planesRotationAngle
+        this.planeRotationAngle
       );
       console.log(`Updating plane ${index} position:`, movedPosition); // デバッグ用
 
       // GSAPを使用してスムーズにアニメーション
-      gsap.to(plane.position, {
-        x: movedPosition.x,
-        y: movedPosition.y,
-        z: movedPosition.z,
-        duration: 0.5,
-        ease: "power2.out",
-      });
+      // gsap.to(plane.position, {
+      //   x: movedPosition.x,
+      //   y: movedPosition.y,
+      //   z: movedPosition.z,
+      //   duration: 0.5,
+      //   // ease: "power2.out",
+      // });
+      // GSAPを使用せずに直接位置を更新
+      plane.position.set(movedPosition.x, movedPosition.y, movedPosition.z);
     });
   }
 
