@@ -265,31 +265,10 @@ export default class ThreeApp {
       window.addEventListener(
         "mousemove",
         (mouseEvent) => {
-          // スクリーン空間の座標系をレイキャスター用に正規化する（-1.0 ~ 1.0 の範囲）
-          const x = (mouseEvent.clientX / window.innerWidth) * 2.0 - 1.0;
-          const y = (mouseEvent.clientY / window.innerHeight) * 2.0 - 1.0;
-          // スクリーン空間は上下が反転している点に注意（Y だけ符号を反転させる）
-          const v = new THREE.Vector2(x, -y);
-          // レイキャスターに正規化済みマウス座標とカメラを指定する
-          this.raycaster.setFromCamera(v, this.camera);
-          const intersects = this.raycaster.intersectObjects(this.planeArray);
-
-          // console.log(this.planeArray.length, intersects.length);
-          if (0 < intersects.length) {
-            const intersectIndex = Number(intersects[0].object.name);
-            console.log(
-              intersectIndex,
-              ThreeApp.DISCOGRAPHY_DATA[intersectIndex].title
-            );
-            // クラスの呼び出し元から渡される関数を使用
-            // &&で繋げているのは、関数の存在確認と関数の実行を同時に行なっている
-            this.onIntersect && this.onIntersect(intersectIndex);
-            this.planeIntersected = true;
-          } else {
-            this.onIntersect && this.onIntersect(null);
-            this.planeIntersected = false;
-            console.log("not intersected.");
-          }
+          const intersects = this.getAndSetIntersectPlanes(
+            mouseEvent.clientX,
+            mouseEvent.clientY
+          );
         },
         false
       );
@@ -314,23 +293,6 @@ export default class ThreeApp {
       requestAnimationFrame(this.render);
 
       // this.displayCameraInfo();
-
-      // 経過時間の取得
-      const deltaTime = this.clock.getDelta();
-      // 回転角度（ラジアン）
-      const rotationAngle = this.clock.getElapsedTime() * 0.5; // 0.5は回転速度
-      // 各プレーンを回転
-      this.planeArray.forEach((plane, index) => {
-        const initialPosition = this.initialPositions[index];
-
-        // 初期位置を基準に回転した新しい位置を計算
-        const movedPosition = this.rotationPlanesByOrient(
-          initialPosition,
-          rotationAngle
-        );
-        // プレーンの位置を更新
-        // plane.position.set(movedPosition.x, movedPosition.y, movedPosition.z);
-      });
 
       // コントロールを更新
       // this.controls.update();
@@ -357,6 +319,7 @@ export default class ThreeApp {
 
   private handleTouchStart(e: TouchEvent) {
     this.touchStartY = e.touches[0].clientY;
+    this.getAndSetIntersectPlanes(e.touches[0].clientX, e.touches[0].clientY);
   }
 
   private handleTouchMove(e: TouchEvent) {
@@ -366,6 +329,7 @@ export default class ThreeApp {
     this.planeRotationAngle += deltaY * this.scrollSensitivity;
     this.touchStartY = touchY;
     this.updatePlanesPosition();
+    this.getAndSetIntersectPlanes(e.touches[0].clientX, e.touches[0].clientY);
   }
 
   // カメラの位置と向きを表示する関数
@@ -481,6 +445,35 @@ export default class ThreeApp {
     } else {
       throw new Error("Invalid window orientation");
     }
+  }
+
+  getAndSetIntersectPlanes(clientX: number, clientY: number): any[] {
+    // スクリーン空間の座標系をレイキャスター用に正規化する（-1.0 ~ 1.0 の範囲）
+    const x = (clientX / window.innerWidth) * 2.0 - 1.0;
+    const y = (clientY / window.innerHeight) * 2.0 - 1.0;
+    // スクリーン空間は上下が反転している点に注意（Y だけ符号を反転させる）
+    const v = new THREE.Vector2(x, -y);
+    // レイキャスターに正規化済みマウス座標とカメラを指定する
+    this.raycaster.setFromCamera(v, this.camera);
+    const intersects = this.raycaster.intersectObjects(this.planeArray);
+
+    // console.log(this.planeArray.length, intersects.length);
+    if (0 < intersects.length) {
+      const intersectIndex = Number(intersects[0].object.name);
+      // console.log(
+      //   intersectIndex,
+      //   ThreeApp.DISCOGRAPHY_DATA[intersectIndex].title
+      // );
+      // クラスの呼び出し元から渡される関数を使用
+      // &&で繋げているのは、関数の存在確認と関数の実行を同時に行なっている
+      this.onIntersect && this.onIntersect(intersectIndex);
+      this.planeIntersected = true;
+    } else {
+      this.onIntersect && this.onIntersect(null);
+      this.planeIntersected = false;
+      // console.log("not intersected.");
+    }
+    return intersects;
   }
 
   createCustomWorldAxesHelper(size = 10, lineWidth = 3) {
