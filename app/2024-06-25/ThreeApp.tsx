@@ -324,6 +324,7 @@ export default class ThreeApp {
   }
 
   private handleTouchStart(e: TouchEvent) {
+    if (!this.planeIntersected) return;
     e.preventDefault(); // オブジェクト上でのタッチ開始時にデフォルト動作を防ぐ
     this.isTouch = true;
     this.touchStartY = e.touches[0].clientY;
