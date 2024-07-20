@@ -110,7 +110,8 @@ export default class ThreeApp {
   models: THREE.Object3D[] = [];
   clock: THREE.Clock | undefined;
   raycaster: THREE.Raycaster = new THREE.Raycaster();
-  touchStartY: number = 0;
+  touchStartY: number | null = 0; // スマホ等タッチの開始点Y座標
+  isTouch: boolean = false;
   scrollSensitivity: number = 0.1;
   windowOrient: string = "";
   /**
@@ -305,8 +306,13 @@ export default class ThreeApp {
     window.addEventListener("wheel", this.handleWheel.bind(this), {
       passive: false,
     });
-    window.addEventListener("touchstart", this.handleTouchStart.bind(this));
-    window.addEventListener("touchmove", this.handleTouchMove.bind(this));
+    window.addEventListener("touchstart", this.handleTouchStart.bind(this), {
+      passive: false,
+    });
+    window.addEventListener("touchmove", this.handleTouchMove.bind(this), {
+      passive: false,
+    });
+    window.addEventListener("touchend", this.handleTouchEnd.bind(this));
   }
 
   private handleWheel(e: WheelEvent) {
@@ -318,18 +324,26 @@ export default class ThreeApp {
   }
 
   private handleTouchStart(e: TouchEvent) {
+    e.preventDefault(); // オブジェクト上でのタッチ開始時にデフォルト動作を防ぐ
+    this.isTouch = true;
     this.touchStartY = e.touches[0].clientY;
     this.getAndSetIntersectPlanes(e.touches[0].clientX, e.touches[0].clientY);
   }
 
   private handleTouchMove(e: TouchEvent) {
     if (this.touchStartY === null || !this.planeIntersected) return;
+    e.preventDefault(); // オブジェクト上でのタッチ開始時にデフォルト動作を防ぐ
     const touchY = e.touches[0].clientY;
     const deltaY = this.touchStartY - touchY;
     this.planeRotationAngle += deltaY * this.scrollSensitivity;
     this.touchStartY = touchY;
     this.updatePlanesPosition();
     this.getAndSetIntersectPlanes(e.touches[0].clientX, e.touches[0].clientY);
+  }
+
+  private handleTouchEnd() {
+    this.isTouch = false;
+    this.touchStartY = null;
   }
 
   // カメラの位置と向きを表示する関数
