@@ -13,10 +13,111 @@ todo
         ・いや、スマホの時の操作感がダメ、最初のタッチでレイキャスタが反応しない。
         　スマホでのホバーは、触ってすぐに離した時の操作。触り続けるとホバーイベントは発火されない。
         →操作感は良くなったが、リロードや画面が動いてしまう
+        　→制御完了
     ・回転の質は検討
     ・回転の途中、微妙な位置で止まったら正位置に持ってくるかどうかは検討
 ・リストの形状は見直す
-    ・
+
+
+
+
+
+
+これは非常に興味深い質問です。それぞれの観点から検討してみましょう。
+
+
+
+①情報パネルの表示方法について：
+
+```tsx
+() => {
+  const data = [
+    { aspect: "メモリ", html: "軽量", threejs: "やや重い" },
+    { aspect: "パフォーマンス", html: "高速", threejs: "やや低速" },
+    { aspect: "実装難易度", html: "簡単", threejs: "やや複雑" },
+    { aspect: "保守性", html: "高い", threejs: "やや低い" },
+    { aspect: "見た目の一貫性", html: "低い", threejs: "高い" },
+    { aspect: "インタラクティブ性", html: "制限あり", threejs: "高い" }
+  ];
+
+  return (
+    <div className="overflow-x-auto">
+      <table className="min-w-full bg-white">
+        <thead>
+          <tr className="bg-gray-200 text-gray-600 uppercase text-sm leading-normal">
+            <th className="py-3 px-6 text-left">観点</th>
+            <th className="py-3 px-6 text-left">HTML</th>
+            <th className="py-3 px-6 text-left">Three.js</th>
+          </tr>
+        </thead>
+        <tbody className="text-gray-600 text-sm font-light">
+          {data.map((row, index) => (
+            <tr key={index} className="border-b border-gray-200 hover:bg-gray-100">
+              <td className="py-3 px-6 text-left whitespace-nowrap">{row.aspect}</td>
+              <td className="py-3 px-6 text-left">{row.html}</td>
+              <td className="py-3 px-6 text-left">{row.threejs}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  );
+}
+
+```
+
+結論：一般的には、HTMLでの実装が推奨されます。特に、メモリ効率、パフォーマンス、実装の簡易さ、保守性の観点で優れています。ただし、Three.jsオブジェクトとの視覚的な一貫性や高度なインタラクティブ性が必要な場合は、Three.jsでの実装も検討に値します。
+
+②画面のアスペクト比や大きさに応じた制御を考慮した場合：
+
+HTMLでの実装がより有利になります。理由は以下の通りです：
+
+1. レスポンシブデザイン：HTMLはCSSを使用して容易にレスポンシブデザインを実現できます。
+2. パフォーマンス：画面サイズの変更に伴うThree.jsオブジェクトの再計算が不要になります。
+3. 分離と保守性：表示ロジックとThree.jsの描画ロジックを分離できるため、保守性が向上します。
+
+③スクロールによる回転制御と描画範囲について：
+
+このケースでは、Three.jsのcanvasを全画面のままにし、client.X, client.Yの値で制御する方が良いでしょう。理由は以下の通りです：
+
+1. 柔軟性：全画面canvasを維持することで、将来的な設計変更に柔軟に対応できます。
+2. パフォーマンス：canvasのサイズ変更は比較的コストの高い操作なので、避けるべきです。
+3. シームレスな体験：ユーザーにとって、区切られていない全画面の体験の方がシームレスに感じられます。
+4. 実装の一貫性：client.X, client.Yを使用することで、他のインタラクションとの一貫性を保てます。
+
+```typescript
+window.addEventListener('scroll', (event) => {
+  const scrollY = window.scrollY;
+  const windowHeight = window.innerHeight;
+  const documentHeight = document.documentElement.scrollHeight;
+
+  // オブジェクトの位置を取得（仮の値）
+  const objectTop = 500;
+  const objectBottom = 700;
+
+  // スクロール位置がオブジェクトの範囲内にあるか確認
+  if (scrollY + windowHeight > objectTop && scrollY < objectBottom) {
+    // オブジェクトに重なっている場合、回転させる
+    const rotationAmount = (scrollY - objectTop) / (objectBottom - objectTop);
+    rotateObject(rotationAmount);
+  }
+});
+
+function rotateObject(amount: number) {
+  // Three.jsオブジェクトを回転させる処理
+  // 例: myObject.rotation.y = amount * Math.PI * 2;
+}
+
+```
+
+総合的な結論：
+1. 情報パネルはHTMLで実装する。
+2. Three.jsのcanvasは全画面で維持し、client.X, client.Yの値でインタラクションを制御する。
+3. スクロールによる回転制御は、スクロール位置とオブジェクトの位置を比較して行う。
+
+この方法により、パフォーマンスと保守性を維持しつつ、柔軟で拡張性の高い実装が可能になります。また、ユーザー体験の一貫性も保たれます。
+
+実装を進める際は、パフォーマンスを定期的に確認し、必要に応じて最適化を行うことをお勧めします。特に、スクロールイベントの処理は頻繁に発生するため、節制（throttling）やデバウンス（debouncing）の技術を使用して、過剰な処理を避けることも検討してください。
 
 
 

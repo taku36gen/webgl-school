@@ -3,11 +3,12 @@
 import ThreeApp from "./ThreeApp";
 import { useEffect, useRef, useState } from "react";
 import React from "react";
+import InfoPanel from "./InfoPanel";
 import styles from "./page.module.css";
 
 export default function Page() {
   const threeAppRef = useRef<ThreeApp | null>(null);
-  const [selectedIndex, setSelectedIndex] = useState<number | null>(null);
+  const [selectedIndex, setSelectedIndex] = useState<number>(0);
 
   useEffect(() => {
     if (typeof window !== "undefined") {
@@ -39,20 +40,7 @@ export default function Page() {
   return (
     <div style={{ position: "relative" }}>
       <div id="webgl"></div>
-      {selectedIndex !== null && (
-        <div
-          style={{
-            position: "absolute",
-            top: 0,
-            left: 0,
-            padding: "10px",
-            backgroundColor: "rgba(10, 16, 14, 0.7)",
-          }}
-        >
-          <h2>Selected Index: {selectedIndex}</h2>
-          <p>Title: {ThreeApp.DISCOGRAPHY_DATA[selectedIndex].title}</p>
-        </div>
-      )}
+      <InfoPanel selectedIndex={selectedIndex} isLandscape={true} />
     </div>
   );
 }

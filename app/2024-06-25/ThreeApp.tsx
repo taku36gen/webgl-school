@@ -20,7 +20,7 @@ export default class ThreeApp {
     lookAt: new THREE.Vector3(0.0, 0.0, 0.0),
   };
   static RENDERER_PARAM = {
-    clearColor: "#F9F8E5",
+    clearColor: 0xffffff,
     width: 0, // コンストラクタにてwindowサイズに応じて初期化
     height: 0, // コンストラクタにてwindowサイズに応じて初期化
   };
@@ -40,13 +40,13 @@ export default class ThreeApp {
     {
       title: "unlosted",
       img_path: "/jacket/unlosted.jpg",
-      release_date: "",
+      release_date: "2024-02-17",
       feat: [
-        { role: "", name: "" },
-        { role: "", name: "" },
+        { role: "voice", name: "初音ミク" },
+        { role: "voice", name: "POPY" },
       ],
-      Streaming: "",
-      MV: "",
+      Streaming: "https://big-up.style/YSbfQLBazZ",
+      MV: "https://www.youtube.com/watch?v=1vzWby09k1k",
     },
     {
       title: "last uncore",
@@ -92,6 +92,17 @@ export default class ThreeApp {
       Streaming: "",
       MV: "",
     },
+    {
+      title: "星空の夢",
+      img_path: "/jacket/hoshizora.jpeg",
+      release_date: "",
+      feat: [
+        { role: "", name: "" },
+        { role: "", name: "" },
+      ],
+      Streaming: "",
+      MV: "",
+    },
   ];
   static IMG_DATA_LIST: THREE.Texture[] = [];
 
@@ -112,6 +123,8 @@ export default class ThreeApp {
   raycaster: THREE.Raycaster = new THREE.Raycaster();
   touchStartY: number | null = 0; // スマホ等タッチの開始点Y座標
   isTouch: boolean = false;
+  isScroll: boolean = false;
+  scrollEndTimer: number | null = null;
   scrollSensitivity: number = 0.1;
   windowOrient: string = "";
   /**
@@ -133,14 +146,14 @@ export default class ThreeApp {
   // (index: number | null): この関数は引数として number または null 型の index を1つ受け取ります。
   // => void: この関数は void を返します。つまり、戻り値がないことを意味します。
   // | null: これは、onIntersect プロパティが null である可能性があることを示しています。
-  onIntersect: ((index: number | null) => void) | null = null;
+  onIntersect: ((index: number) => void) | null = null;
 
   /**
    * コンストラクタ
    * @constructor
    * @param {HTMLElement} wrapper - canvas 要素を append する親要素
    */
-  constructor(wrapper: any, onIntersect: (index: number | null) => void) {
+  constructor(wrapper: any, onIntersect: (index: number) => void) {
     // クラスの呼び出し元でコンストラクタに受け渡されたコールバック関数をクラスのプロパティに代入
     this.onIntersect = onIntersect;
 
@@ -216,7 +229,7 @@ export default class ThreeApp {
         plane.name = `${i}`;
         let radian = (i * 2 * Math.PI) / ThreeApp.DISCOGRAPHY_DATA.length;
         const initialPosition = new THREE.Vector3(
-          0,
+          0.75,
           Math.sin(radian) * this.planesRadius,
           Math.cos(radian) * this.planesRadius
         );
@@ -317,14 +330,25 @@ export default class ThreeApp {
 
   private handleWheel(e: WheelEvent) {
     e.preventDefault();
+    this.isScroll = true;
     if (this.planeIntersected) {
       this.planeRotationAngle += e.deltaY * this.scrollSensitivity;
       this.updatePlanesPosition();
     }
+    this.getAndSetIntersectPlanes(e.clientX, e.clientY);
+
+    // スクロール終了の検知
+    if (this.scrollEndTimer !== null) {
+      window.clearTimeout(this.scrollEndTimer);
+    }
+    this.scrollEndTimer = window.setTimeout(() => {
+      // スクロール終了時の raycaster 更新
+      this.getAndSetIntersectPlanes(e.clientX, e.clientY);
+      this.scrollEndTimer = null;
+    }, 150);
   }
 
   private handleTouchStart(e: TouchEvent) {
-    if (!this.planeIntersected) return;
     e.preventDefault(); // オブジェクト上でのタッチ開始時にデフォルト動作を防ぐ
     this.isTouch = true;
     this.touchStartY = e.touches[0].clientY;
@@ -484,7 +508,7 @@ export default class ThreeApp {
       this.onIntersect && this.onIntersect(intersectIndex);
       this.planeIntersected = true;
     } else {
-      this.onIntersect && this.onIntersect(null);
+      // this.onIntersect && this.onIntersect(null);
       this.planeIntersected = false;
       // console.log("not intersected.");
     }
