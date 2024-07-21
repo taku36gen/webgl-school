@@ -2,8 +2,9 @@
 
 import * as THREE from "three";
 import { OrbitControls } from "three/examples/jsm/controls/OrbitControls.js";
-import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader.js";
-import { DRACOLoader } from "three/examples/jsm/loaders/DRACOLoader.js";
+import { EffectComposer } from "three/examples/jsm/postprocessing/EffectComposer.js";
+import { RenderPass } from "three/examples/jsm/postprocessing/RenderPass.js";
+import { GlitchPass } from "three/examples/jsm/postprocessing/GlitchPass.js";
 
 export default class ThreeApp {
   /**
@@ -23,12 +24,12 @@ export default class ThreeApp {
     height: 0, // コンストラクタにてwindowサイズに応じて初期化
   };
   static DIRECTIONAL_LIGHT_PARAM = {
-    color: 0xffffff,
-    intensity: 1.0,
-    position: new THREE.Vector3(0, 100, 0),
+    color: 0xe58fe7,
+    intensity: 3.0,
+    position: new THREE.Vector3(-30, 30, 10),
   };
   static AMBIENT_LIGHT_PARAM = {
-    color: 0xffffff,
+    color: 0x21f2e8,
     intensity: 1.0,
   };
   /**
@@ -40,7 +41,7 @@ export default class ThreeApp {
     height: 2,
   };
   static PLANE_MAT_PARAM = {
-    color: "#e7e628",
+    color: "#acff09",
   };
   static DISTANDE_FROM_SPHERE = 12;
   /**
@@ -53,6 +54,15 @@ export default class ThreeApp {
   };
   static SPHER_MAT_PARAM = {
     color: 0xffffff,
+    shininess: 100,
+  };
+  /**
+   * フォグの定義のための定数 @@@
+   */
+  static FOG_PARAM = {
+    color: 0xffffff, // フォグの色
+    near: 11.0, // フォグの掛かり始めるカメラからの距離
+    far: 30.0, // フォグが完全に掛かるカメラからの距離
   };
 
   /**
@@ -141,6 +151,10 @@ export default class ThreeApp {
         ThreeApp.DIRECTIONAL_LIGHT_PARAM.position
       );
       this.scene.add(this.directionalLight);
+      const bgTexture = new THREE.TextureLoader().load(
+        "/2024-06-11/space-background-with-stardust-and-shining-stars-realistic-colorful-cosmos-with-nebula-and-milky-way.jpg"
+      );
+      this.scene.background = bgTexture;
 
       // アンビエントライト（環境光）
       this.ambientLight = new THREE.AmbientLight(
@@ -148,6 +162,13 @@ export default class ThreeApp {
         ThreeApp.AMBIENT_LIGHT_PARAM.intensity
       );
       this.scene.add(this.ambientLight);
+
+      // fog
+      this.scene.fog = new THREE.Fog(
+        ThreeApp.FOG_PARAM.color,
+        ThreeApp.FOG_PARAM.near,
+        ThreeApp.FOG_PARAM.far
+      );
 
       /**
        * 飛行機の作成
@@ -168,7 +189,7 @@ export default class ThreeApp {
       this.planeMesh.position.set(0, 0, ThreeApp.DISTANDE_FROM_SPHERE); // グループ内での相対位置
       // 飛行機の向き
       this.planeMesh.rotation.x = -Math.PI * 0;
-      this.addAxesHelper(this.planeMesh, 5);
+      // this.addAxesHelper(this.planeMesh, 5);
       this.planeCurrentDirection = new THREE.Vector3(0.0, 1.0, 0).normalize();
       // 飛行機の向きベクトルデバッグ用
       this.planeArrowHelper = new THREE.ArrowHelper(
@@ -177,7 +198,7 @@ export default class ThreeApp {
         5,
         0xff0029
       );
-      this.scene.add(this.planeArrowHelper);
+      // this.scene.add(this.planeArrowHelper);
       // ★飛行機に対するカメラの位置
       this.camera.position.set(0, 0, 12); // 飛行機より後ろ、少し上に
       this.scene.add(this.planeMesh);
@@ -197,7 +218,7 @@ export default class ThreeApp {
         ThreeApp.SPHER_MAT_PARAM
       );
       const textureLoader = new THREE.TextureLoader();
-      const earthPath = "/tex/earth.jpg";
+      const earthPath = "/2024-06-11/lroc_color_poles_1k.jpg";
       textureLoader.load(earthPath, (earthTexture) => {
         if (this.sphereMaterial && this.scene) {
           // 地球用
@@ -213,7 +234,7 @@ export default class ThreeApp {
 
       // 軸ヘルパー
       const worldAxes = this.createCustomWorldAxesHelper(15, 5);
-      this.scene.add(worldAxes);
+      // this.scene.add(worldAxes);
 
       // コントロール
       this.controls = new OrbitControls(this.camera, this.renderer.domElement);
@@ -251,9 +272,7 @@ export default class ThreeApp {
       this.camera &&
       this.controls &&
       this.clock &&
-      // this.planeCameraGroup &&
       this.planeMesh &&
-      // this.groupCurrentDirection
       this.planeCurrentDirection &&
       this.planeArrowHelper
     ) {
@@ -303,7 +322,6 @@ export default class ThreeApp {
       // (D) コサインをラジアンに戻す
       const radians = Math.acos(cos);
       let degree = radians * (180 / Math.PI);
-      console.log(degree);
 
       // 求めた法線ベクトルとラジアンからクォータニオンを定義
       const qtn = new THREE.Quaternion().setFromAxisAngle(normalAxis, radians);

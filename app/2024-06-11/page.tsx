@@ -36,6 +36,25 @@ export default function Page() {
   return (
     <div style={{ position: "relative" }}>
       <div id="webgl"></div>
+      <footer
+        style={{
+          position: "absolute",
+          bottom: 0,
+          left: 0,
+          right: 0,
+          zIndex: 1,
+          fontSize: 10,
+        }}
+      >
+        <p>【月面】NASA&apos;s Scientific Visualization Studio</p>
+        <p>
+          <a>【背景】</a>
+          <a href="https://jp.freepik.com/free-photo/space-background-with-stardust-and-shining-stars-realistic-colorful-cosmos-with-nebula-and-milky-way_38095260.htm#query=universe&position=3&from_view=keyword&track=ais_user&uuid=cc88f4bb-2621-4d1c-b89d-10742371c60d">
+            著作者：benzoix
+          </a>
+          ／出典：Freepik
+        </p>
+      </footer>
     </div>
   );
 }
