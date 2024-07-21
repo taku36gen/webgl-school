@@ -26,7 +26,7 @@
 
 .landscapeContainer {
   justify-content: flex-end;
-  padding-left: 15%; /* 左側のパディングを調整 */
+  padding-left: 10%; /* 左側のパディングを調整 */
   padding-right: 2%; /* 右側のパディングを調整 */
 }
 

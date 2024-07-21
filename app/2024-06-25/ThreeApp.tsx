@@ -142,6 +142,9 @@ export default class ThreeApp {
   // intersect関連
   intersects!: any[]; // 可変長配列の空配列の定義方法
   planeIntersected: boolean = false;
+  selectedIndex: number | null = null; // 選択中のアルバムのインデックスを保持 // 最初はnull
+  highlightScale: number = 1.5; // ハイライト中の拡大スケール
+  gsapTimeline: gsap.core.Timeline = gsap.timeline(); // gsapのタイムライン
   // 選択中のアルバムのインデックスを保持するための関数プロパティ
   // 関数自体はクラスの呼び出し元で定義しこのクラスに渡される。ここではその型定義のみしている
   // (index: number | null): この関数は引数として number または null 型の index を1つ受け取ります。
@@ -152,6 +155,8 @@ export default class ThreeApp {
   planeMode: string = "straight";
   // planeの一辺の値
   planeSize: number = 0;
+  // planeのx座標を保持しておく
+  planeCurrentX: number = 0;
 
   /**
    * コンストラクタ
@@ -249,8 +254,11 @@ export default class ThreeApp {
 
             this.renderer.setSize(width, height);
             this.camera.aspect = width / height;
+
             if (this.planeMode === "straight") {
               this.updatePlanesWithResizes();
+              // ハイライト状態を元に戻す
+              this.highlightAndSetSelectedPlane(null, true);
               this.camera.position.z = this.calculateCameraDistance();
             }
             this.camera.updateProjectionMatrix();
@@ -439,6 +447,9 @@ export default class ThreeApp {
       // console.log(distance);
       this.camera = new THREE.PerspectiveCamera(60, aspect, 0.1, 1000.0);
       this.camera.position.set(0, 0, distance);
+
+      // 最初は最初のオブジェクトをハイライトしておく
+      this.highlightAndSetSelectedPlane(0, false);
     }
   }
 
@@ -490,6 +501,9 @@ export default class ThreeApp {
       planeMesh.position.y = y;
       planeMesh.updateMatrix();
       // 初期値座標の情報も更新
+      //// x座用はみんな共通
+      this.initialPositions[i].x = x;
+      /// y座標はplaneSizeに応じて再設定
       const initialY = i * -1 * this.planeSize;
       this.initialPositions[i].y = initialY;
     });
@@ -516,7 +530,6 @@ export default class ThreeApp {
           ease: "power2.out", // イージング関数
         });
       });
-      console.log(this.planeArray[0].position.y);
 
       // スクロールの制限（必要に応じて）
       const totalHeight = (this.planeArray.length - 1) * this.planeSize;
@@ -528,31 +541,6 @@ export default class ThreeApp {
       );
     }
   }
-
-  // カメラの位置と向きを表示する関数
-  displayCameraInfo() {
-    if (this.camera && this.controls) {
-      const currentPosition = new THREE.Vector3();
-      this.camera.getWorldPosition(currentPosition);
-
-      if (!currentPosition.equals(this.previousPosition)) {
-        const target = this.controls.target;
-
-        console.log("Camera Position:");
-        console.log("  x:", currentPosition.x);
-        console.log("  y:", currentPosition.y);
-        console.log("  z:", currentPosition.z);
-
-        console.log("Camera LookAt:");
-        console.log("  x:", target.x);
-        console.log("  y:", target.y);
-        console.log("  z:", target.z);
-
-        this.previousPosition.copy(currentPosition);
-      }
-    }
-  }
-
   private setOrientation() {
     const portrait = window.innerHeight > window.innerWidth;
     // ここで向きに応じた処理を行う
@@ -630,10 +618,156 @@ export default class ThreeApp {
       // &&で繋げているのは、関数の存在確認と関数の実行を同時に行なっている
       this.onIntersect && this.onIntersect(intersectIndex);
       this.planeIntersected = true;
+      // 選ばれたインデックスをイライト用の関数に渡し実行する
+      this.highlightAndSetSelectedPlane(intersectIndex, false);
+
+      console.log(intersectIndex);
     } else {
       this.planeIntersected = false;
+      // 何もしない？
+      this.highlightAndSetSelectedPlane(null, false);
     }
+
+    console.log(this.selectedIndex);
     return intersects;
+  }
+
+  private highlightAndSetSelectedPlane(
+    intersectIndex: number | null,
+    isResize: boolean
+  ) {
+    // ハイライトにより移動する量
+    const delta = (this.planeSize * (this.highlightScale - 1)) / 2;
+
+    if (!isResize) {
+      // ★selectedIndexが非null = 何かハイライトしているとき
+      // ※selectedIndexが描画中に非nullからnullになるのは、リサイズ時のみ
+      if (this.selectedIndex != null) {
+        // ①今選択中のものと同じものにintersectedした場合(intersectIndex!=null)
+        if (intersectIndex != null && this.selectedIndex == intersectIndex) {
+          // 何もしない
+          return;
+        }
+        // ②今選択中のものと異なるものにintersectedした場合(intersectIndex!=null)
+        else if (
+          intersectIndex != null &&
+          this.selectedIndex != intersectIndex
+        ) {
+          // 最初に各パラメータを更新する
+          const previousIndex = this.selectedIndex;
+          this.selectedIndex = intersectIndex;
+          // 選択中のものを戻し、新しいものをハイライトする
+          this.gsapTimeline = gsap.timeline();
+          this.gsapTimeline
+            .to(
+              this.planeArray[previousIndex].scale,
+              {
+                duration: 0.2,
+                x: 1,
+                y: 1,
+                z: 1,
+                ease: "power2.inOut",
+              },
+              0
+            )
+            .to(
+              this.planeArray[previousIndex].position,
+              {
+                duration: 0.2,
+                x: this.initialPositions[previousIndex].x,
+                y: this.planeArray[previousIndex].position.y,
+                z: 0,
+                ease: "power2.inOut",
+              },
+              0
+            )
+            .to(
+              this.planeArray[this.selectedIndex].scale,
+              {
+                duration: 0.2,
+                x: this.highlightScale,
+                y: this.highlightScale,
+                z: this.highlightScale,
+                ease: "power2.inOut",
+              },
+              0
+            )
+            .to(
+              this.planeArray[this.selectedIndex].position,
+              {
+                duration: 0.2,
+                x: this.initialPositions[previousIndex].x + delta,
+                y: this.planeArray[this.selectedIndex].position.y,
+                z: 1,
+                ease: "power2.inOut",
+              },
+              0
+            );
+
+          return;
+        }
+        // ③intersectedしている状態から、intersected外に出た場合
+        else if (intersectIndex == null) {
+          // 何もしない
+          return;
+        }
+      }
+      // ★selectedIndexがnull = 何もハイライトしていないとき
+      else {
+        // selectedIndexがnull の状態から、何かにintersecetしたとき(intersectedIndex!=null)
+        if (intersectIndex != null) {
+          // intersectedIndexをハイライトし、selectedIndexも更新する
+          this.gsapTimeline = gsap.timeline();
+          this.gsapTimeline
+            .to(
+              this.planeArray[intersectIndex].scale,
+              {
+                duration: 0.2,
+                x: this.highlightScale,
+                y: this.highlightScale,
+                z: this.highlightScale,
+                ease: "power2.inOut",
+              },
+              0
+            )
+            .to(
+              this.planeArray[intersectIndex].position,
+              {
+                duration: 0.2,
+                x: this.initialPositions[intersectIndex].x + delta,
+                y: this.planeArray[intersectIndex].position.y,
+                z: 1,
+                ease: "power2.inOut",
+              },
+              0
+            );
+          this.selectedIndex = intersectIndex;
+          return;
+        }
+        // selectedIndexがnull の状態から、何にもintersecetしていないとき
+        else {
+          // 何もしない
+          return;
+        }
+      }
+    }
+    // リサイズ時の限定処理を行う
+    else {
+      // selectedIndexが選ばれている状態でのリサイズ
+      if (this.selectedIndex != null) {
+        this.planeArray[this.selectedIndex].scale.set(1, 1, 1);
+        this.planeArray[this.selectedIndex].position.x =
+          this.initialPositions[this.selectedIndex].x;
+        this.planeArray[this.selectedIndex].position.z = 0;
+        this.planeArray[this.selectedIndex].updateMatrix();
+        this.selectedIndex = null;
+        return;
+      }
+      // selectedIndexが選ばれていない時（連続リサイズなど）
+      else {
+        return;
+      }
+    }
   }
 
   createCustomWorldAxesHelper(size = 10, lineWidth = 3) {
