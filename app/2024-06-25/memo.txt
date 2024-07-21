@@ -1,0 +1,19 @@
+calculateCameraDistance()
+
+この関数の目的は、指定された数のプレーンが画面に収まるようにカメラの距離を計算することです。
+typescriptCopycalculateCameraDistance() {
+  const vFov = THREE.MathUtils.degToRad(this.camera.fov);
+  return (this.visiblePlanes * this.planeSpacing) / (2 * Math.tan(vFov / 2));
+}
+考え方：
+a. カメラの視野角（Field of View, FOV）を使用します。これは通常、垂直方向のFOVです。
+b. この角度をラジアンに変換します（THREE.MathUtils.degToRad()を使用）。
+c. カメラから見た視錐台（view frustum）の高さの半分は、tan(vFov / 2) * distance で計算できます。
+ここで、distance はカメラからの距離です。
+d. 私たちは visiblePlanes * planeSpacing の高さを持つ領域を表示したいので、
+次の方程式が成り立ちます：
+(visiblePlanes * planeSpacing) / 2 = tan(vFov / 2) * distance
+e. この方程式を distance について解くと、
+distance = (visiblePlanes * planeSpacing) / (2 * tan(vFov / 2))
+となり、これが関数の戻り値になります。
+この計算により、指定された数のプレーンが画面に丁度収まるカメラの距離が得られます。

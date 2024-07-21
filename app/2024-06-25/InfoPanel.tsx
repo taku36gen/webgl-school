@@ -17,40 +17,43 @@ const InfoPanel: React.FC<InfoPanelProps> = ({
 
   return (
     <div
-      className={`${styles.infoPanel} ${
-        isLandscape ? styles.landscapePanel : ""
+      className={`${styles.infoPanelContainer} ${
+        isLandscape ? styles.landscapeContainer : ""
       }`}
     >
-      <h2 className={styles.title}>{data.title}</h2>
+      <div className={styles.infoPanel}>
+        <h2 className={styles.title}>{data.title}</h2>
 
-      <div className={styles.infoSection}>
-        <p className={styles.label}>Release Date:</p>
-        <p>{data.release_date || "N/A"}</p>
-      </div>
+        <div className={styles.infoSection}>
+          <p className={styles.label}>Release Date:</p>
+          <p className={styles.content}>{data.release_date || "N/A"}</p>
+        </div>
 
-      <div className={styles.infoSection}>
-        <p className={styles.label}>Featured Artists:</p>
-        {data.feat.map((artist, index) => (
-          <div key={index} className={styles.featArtist}>
-            <p>
-              {artist.role}: {artist.name}
-            </p>
-          </div>
-        ))}
-      </div>
+        <div className={styles.infoSection}>
+          <p className={styles.label}>Featured Artists:</p>
+          {data.feat.map((artist, index) => (
+            <div key={index} className={styles.featArtist}>
+              <p className={styles.content}>
+                <span className={styles.role}>{artist.role}:</span>{" "}
+                {artist.name}
+              </p>
+            </div>
+          ))}
+        </div>
 
-      <div className={styles.infoSection}>
-        <p className={styles.label}>Streaming:</p>
-        <a href={data.Streaming} className={styles.link}>
-          Listen Now
-        </a>
-      </div>
+        <div className={styles.infoSection}>
+          <p className={styles.label}>Streaming:</p>
+          <a href={data.Streaming} className={styles.link}>
+            Listen Now
+          </a>
+        </div>
 
-      <div className={styles.infoSection}>
-        <p className={styles.label}>MV:</p>
-        <a href={data.MV} className={styles.link}>
-          Watch Video
-        </a>
+        <div className={styles.infoSection}>
+          <p className={styles.label}>MV:</p>
+          <a href={data.MV} className={styles.link}>
+            Watch Video
+          </a>
+        </div>
       </div>
     </div>
   );

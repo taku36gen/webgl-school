@@ -8,8 +8,6 @@ import gsap from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
 
 export default class ThreeApp {
-  private containerRef: React.RefObject<HTMLDivElement>;
-
   /**
    * シーン共通パラメータ（クラス定義）
    */
@@ -19,10 +17,10 @@ export default class ThreeApp {
     near: 0.1,
     far: 150.0,
     position: new THREE.Vector3(0, 0, 4),
-    lookAt: new THREE.Vector3(0, 0.0, 0.0),
+    lookAt: new THREE.Vector3(0.0, 0.0, 0.0),
   };
   static RENDERER_PARAM = {
-    clearColor: 0x1f66c0,
+    clearColor: 0xffffff,
     width: 0, // コンストラクタにてwindowサイズに応じて初期化
     height: 0, // コンストラクタにてwindowサイズに応じて初期化
   };
@@ -112,7 +110,6 @@ export default class ThreeApp {
   renderer: THREE.WebGLRenderer | undefined;
   scene!: THREE.Scene;
   camera!: THREE.PerspectiveCamera;
-  orthograpohicCamera!: THREE.OrthographicCamera;
   previousPosition = new THREE.Vector3();
   directionalLight: THREE.DirectionalLight | undefined;
   ambientLight: THREE.AmbientLight | undefined;
@@ -125,10 +122,9 @@ export default class ThreeApp {
   isTouch: boolean = false;
   isScroll: boolean = false;
   scrollEndTimer: number | null = null;
-  scrollSensitivity: number = 0.5;
+  scrollSensitivity: number = 0.1;
   windowOrient: string = "";
   textureLoader: THREE.TextureLoader = new THREE.TextureLoader();
-  rect: DOMRect | undefined;
   /**
    * 板ポリゴン
    */
@@ -144,6 +140,7 @@ export default class ThreeApp {
   planeRotationAngle: number = 0;
   // 直線運動モード用のスクロール量
   scrollOffset: number = 0;
+  visiblePlanes: number = 3; // 画面に表示するプレーンの数
   planeRelativeSize: number = 0.8; // プレーンの相対的なサイズ（画面の右半分の40%）
   intersects!: any[]; // 可変長配列の空配列の定義方法
   planeIntersected: boolean = false;
@@ -163,23 +160,14 @@ export default class ThreeApp {
    * @constructor
    * @param {HTMLElement} wrapper - canvas 要素を append する親要素
    */
-  constructor(
-    wrapper: any,
-    containerRef: React.RefObject<HTMLDivElement>,
-    onIntersect: (index: number) => void
-  ) {
+  constructor(wrapper: any, onIntersect: (index: number) => void) {
     // クラスの呼び出し元でコンストラクタに受け渡されたコールバック関数をクラスのプロパティに代入
     this.onIntersect = onIntersect;
 
-    // 親要素(wrapperで保持)の情報を受け取る
-    this.rect = wrapper.getBoundingClientRect();
-    // three.jsのcanvasの親要素への参照を保持
-    this.containerRef = containerRef;
-
-    if (typeof window !== "undefined" && this.rect) {
+    if (typeof window !== "undefined") {
       // 画面の縦長/横長を判定
       this.setOrientation();
-      // console.log(this.windowOrient);
+      console.log(this.windowOrient);
 
       // window定義後に定義が必要な部分のみ、クラス定数の定義をクライアントサイドで行う
       /**
@@ -193,11 +181,10 @@ export default class ThreeApp {
       const color = new THREE.Color(ThreeApp.RENDERER_PARAM.clearColor);
       this.renderer = new THREE.WebGLRenderer();
       this.renderer.setClearColor(color);
-      // this.renderer.setSize(
-      //   ThreeApp.RENDERER_PARAM.width,
-      //   ThreeApp.RENDERER_PARAM.height
-      // );
-      this.renderer.setSize(this.rect.width, this.rect.height);
+      this.renderer.setSize(
+        ThreeApp.RENDERER_PARAM.width,
+        ThreeApp.RENDERER_PARAM.height
+      );
       wrapper.appendChild(this.renderer.domElement);
 
       // シーン
@@ -211,7 +198,6 @@ export default class ThreeApp {
         ThreeApp.CAMERA_PARAM.far
       );
       this.camera.position.copy(ThreeApp.CAMERA_PARAM.position);
-      this.camera.lookAt(ThreeApp.CAMERA_PARAM.lookAt);
 
       // ディレクショナルライト（平行光源）
       this.directionalLight = new THREE.DirectionalLight(
@@ -231,16 +217,24 @@ export default class ThreeApp {
       this.scene.add(this.ambientLight);
 
       // 軸ヘルパー
-      // const worldAxes = this.createCustomWorldAxesHelper(1000, 10);
-      // this.scene.add(worldAxes);
+      const worldAxes = this.createCustomWorldAxesHelper(1000, 10);
+      this.scene.add(worldAxes);
 
       // コントロール
-      // this.controls = new OrbitControls(this.camera, this.renderer.domElement);
+      this.controls = new OrbitControls(this.camera, this.renderer.domElement);
 
       /**
        * 板ポリゴンの作成
        */
       this.setPlaneInitialPositions(); // 板ポリゴンの初期配置
+
+      /**
+       * スクロールイベント関連
+       */
+      // GSAPのScrollTriggerプラグインを登録
+      gsap.registerPlugin(ScrollTrigger);
+      // スクロールイベントの設定
+      this.setupScrollAnimation();
 
       // this のバインド
       this.render = this.render.bind(this);
@@ -252,15 +246,11 @@ export default class ThreeApp {
       window.addEventListener(
         "resize",
         () => {
-          if (this.renderer && this.camera && this.containerRef.current) {
-            this.rect = this.containerRef.current.getBoundingClientRect();
-            const width = this.rect.width;
-            const height = Math.min(this.rect.height, 600); // 最大高さを600pxに制限
-
-            this.renderer.setSize(width, height);
-            this.camera.aspect = width / height;
-            if (this.planeMode === "straight") {
-              this.updatePlanesWithResizes();
+          if (this.renderer && this.camera) {
+            this.renderer.setSize(window.innerWidth, window.innerHeight);
+            this.camera.aspect = window.innerWidth / window.innerHeight;
+            if (this.planeMode == "straight") {
+              this.updatePlanesSize();
               this.camera.position.z = this.calculateCameraDistance();
             }
             this.camera.updateProjectionMatrix();
@@ -301,7 +291,6 @@ export default class ThreeApp {
 
       // レンダラーで描画
       this.renderer.render(this.scene, this.camera);
-      // this.renderer.render(this.scene, this.orthograpohicCamera);
     }
   }
   private setupScrollEventListeners() {
@@ -319,12 +308,10 @@ export default class ThreeApp {
 
   private handleWheel(e: WheelEvent) {
     this.isScroll = true;
-    // console.log("scrolled!");
     if (this.planeIntersected) {
       e.preventDefault();
-      // console.log(e.deltaY);
       this.planeRotationAngle += e.deltaY * this.scrollSensitivity; //円運動用
-      this.scrollOffset += e.deltaY * this.scrollSensitivity; // 直線配置用
+      this.scrollOffset += e.deltaY * 0.001; // 直線配置用
       this.updatePlanesPosition();
     }
     this.getAndSetIntersectPlanes(e.clientX, e.clientY);
@@ -337,13 +324,10 @@ export default class ThreeApp {
       // スクロール終了時の raycaster 更新
       this.getAndSetIntersectPlanes(e.clientX, e.clientY);
       this.scrollEndTimer = null;
-      this.isScroll = false;
-      // console.log("scrolleEnd...");
     }, 150);
   }
 
   private handleTouchStart(e: TouchEvent) {
-    // console.log("touchStarted!");
     e.preventDefault(); // オブジェクト上でのタッチ開始時にデフォルト動作を防ぐ
     this.isTouch = true;
     this.touchStartY = e.touches[0].clientY;
@@ -355,10 +339,7 @@ export default class ThreeApp {
     e.preventDefault(); // オブジェクト上でのタッチ開始時にデフォルト動作を防ぐ
     const touchY = e.touches[0].clientY;
     const deltaY = this.touchStartY - touchY;
-    // rotationモード用
     this.planeRotationAngle += deltaY * this.scrollSensitivity;
-    // straightモード用
-    this.scrollOffset += deltaY * this.scrollSensitivity; // スクロール方向を反転
     this.touchStartY = touchY;
     this.updatePlanesPosition();
     this.getAndSetIntersectPlanes(e.touches[0].clientX, e.touches[0].clientY);
@@ -396,7 +377,7 @@ export default class ThreeApp {
         plane.name = `${i}`;
         let radian = (i * 2 * Math.PI) / ThreeApp.DISCOGRAPHY_DATA.length;
         const initialPosition = new THREE.Vector3(
-          1.2,
+          0.75,
           Math.sin(radian) * this.planesRadius,
           Math.cos(radian) * this.planesRadius
         );
@@ -406,18 +387,14 @@ export default class ThreeApp {
         this.planeArray.push(plane);
       });
       this.scene.add(this.planeGroup);
-    } else if (this.planeMode == "straight" && this.rect) {
-      // planeSizeの設定
-      this.planeSize = (this.rect.width / 2) * 0.9;
-      // console.log(this.planeSize);
-      if (300 < this.planeSize) {
-        this.planeSize = 300;
-      }
-
+    } else if (this.planeMode == "straight") {
+      this.calculateAndSetPlaneSize(); // 初期サイズを設定
       this.planeGeometry = new THREE.PlaneGeometry(
         this.planeSize,
         this.planeSize
       );
+      const totalPlanes = ThreeApp.DISCOGRAPHY_DATA.length;
+      const middleIndex = Math.floor(totalPlanes / 2);
 
       ThreeApp.DISCOGRAPHY_DATA.forEach((data, i) => {
         const material = new THREE.MeshPhongMaterial();
@@ -426,80 +403,50 @@ export default class ThreeApp {
         // メッシュ
         const plane = new THREE.Mesh(this.planeGeometry, material);
         plane.name = `${i}`;
-        // y座標はplaneSizeごとに下に一つずつずらし、余白は設けない
-        const y = i * -1 * this.planeSize;
-
-        // X軸は微調整
-        if (!this.rect) return;
-        const x =
-          -(this.rect.width / 2) + this.rect.width * 0.04 + this.planeSize / 2;
+        const y = (i - middleIndex) * this.planeSize;
+        const x = this.planeSize / (2 * this.planeRelativeSize);
         plane.position.set(x, y, 0);
-        const initialPosition = new THREE.Vector3(x, y, 0);
-        this.initialPositions.push(initialPosition);
         this.planeGroup.add(plane);
         this.planeArray.push(plane);
       });
       this.scene.add(this.planeGroup);
 
-      // 直交投影カメラの追加
-      const aspect = this.rect.width / this.rect.height;
       const fov = 60;
-      const radian = (fov / 2) * (Math.PI / 180);
-      const distance = this.rect.height / 2 / Math.tan(radian);
-      // console.log(distance);
-      this.camera = new THREE.PerspectiveCamera(60, aspect, 0.1, 1000.0);
-      this.camera.position.set(0, 0, distance);
+      let aspect = window.innerWidth / window.innerHeight;
+      if (600 < window.innerHeight) {
+        aspect = window.innerWidth / 600;
+      }
+      const near = 0.1;
+      const far = 1000;
+      this.camera = new THREE.PerspectiveCamera(fov, aspect, near, far);
+      this.camera.position.x = this.planeSize / (2 * this.planeRelativeSize);
+      this.camera.position.z = this.calculateCameraDistance();
     }
   }
 
   // 直線運動の際のカメラの距離を計算
   calculateCameraDistance() {
-    if (this.rect) {
-      const fov = 60;
-      const radian = (fov / 2) * (Math.PI / 180);
-      const distance = this.rect.height / 2 / Math.tan(radian);
-      return distance;
+    const vFov = THREE.MathUtils.degToRad(this.camera.fov);
+    const aspectRatio = window.innerWidth / window.innerHeight;
+
+    // 縦長か横長かで計算方法を変える
+    if (this.windowOrient === "Portrait") {
+      // 縦長の場合、幅に対する相対サイズを使用
+      return this.planeSize / 2 / Math.tan(vFov / 2) / aspectRatio;
     } else {
-      throw new Error("rect is not exsit");
+      // 横長の場合、高さに対する相対サイズを使用
+      return this.planeSize / 2 / Math.tan(vFov / 2) / aspectRatio;
     }
   }
-
-  private updatePlanesWithResizes() {
-    if (!this.planeArray || !this.rect) return;
-    // planeSizeの設定
-    const originalSize = this.planeSize; // 前のサイズを保持
-    this.planeSize = Math.min((this.rect.width / 2) * 0.9, 300);
-    this.planeArray.forEach((planeMesh, i) => {
-      if (!this.rect) return;
-      // サイズ更新
-      planeMesh.geometry.dispose();
-      planeMesh.geometry = new THREE.PlaneGeometry(
-        this.planeSize,
-        this.planeSize
-      );
-      // x軸更新
-      const x =
-        -(this.rect.width / 2) + this.rect.width * 0.04 + this.planeSize / 2;
-      // y軸更新
-      const originalY = planeMesh.position.y;
-      //// スクロールオフセットも調節が必要な気がする->これは良いか。
-      // this.scrollOffset = this.scrollOffset - (this.planeSize - originalSize);
-      ////  スクロールの制限（必要に応じて）
-      const totalHeight = (this.planeArray.length - 1) * this.planeSize;
-      const minScroll = 0;
-      const maxScroll = totalHeight;
-      this.scrollOffset = Math.max(
-        minScroll,
-        Math.min(maxScroll, this.scrollOffset)
-      );
-      const y = i * -1 * this.planeSize + this.scrollOffset;
-      planeMesh.position.x = x;
-      planeMesh.position.y = y;
-      planeMesh.updateMatrix();
-      // 初期値座標の情報も更新
-      const initialY = i * -1 * this.planeSize;
-      this.initialPositions[i].y = initialY;
-    });
+  // 直線運動の際のplaneの大きさを計算
+  calculateAndSetPlaneSize() {
+    const screenWidth = window.innerWidth;
+    const screenHeight = window.innerHeight;
+    // windowOrientを使用してプレーンのサイズを計算
+    this.planeSize = (screenWidth / 2) * this.planeRelativeSize;
+    // this.windowOrient === "Landscape"
+    //   ? screenHeight * this.planeRelativeSize
+    //   : (screenWidth / 2) * this.planeRelativeSize;
   }
 
   private updatePlanesPosition() {
@@ -513,27 +460,41 @@ export default class ThreeApp {
         plane.position.set(movedPosition.x, movedPosition.y, movedPosition.z);
       });
     } else if (this.planeMode == "straight") {
-      this.planeArray.forEach((plane, index) => {
-        const initialY = this.initialPositions[index].y;
-        const newY = initialY + this.scrollOffset; // マイナスに注意
-        // plane.position.y = newY;
-        gsap.to(plane.position, {
-          y: newY,
-          duration: 0.5, // アニメーション時間（秒）
-          ease: "power2.out", // イージング関数
-        });
-      });
-      console.log(this.planeArray[0].position.y);
+      const totalHeight = this.planeArray.length * this.planeSize;
+      const halfVisibleHeight = (this.visiblePlanes * this.planeSize) / 2;
 
-      // スクロールの制限（必要に応じて）
-      const totalHeight = (this.planeArray.length - 1) * this.planeSize;
-      const minScroll = 0;
-      const maxScroll = totalHeight;
-      this.scrollOffset = Math.max(
-        minScroll,
-        Math.min(maxScroll, this.scrollOffset)
-      );
+      this.planeArray.forEach((plane, index) => {
+        let y =
+          (index - Math.floor(this.planeArray.length / 2)) * this.planeSize -
+          this.scrollOffset;
+
+        // 無限スクロールの実装
+        while (y < -halfVisibleHeight - this.planeSize / 2) {
+          y += totalHeight;
+        }
+        while (y > halfVisibleHeight + this.planeSize / 2) {
+          y -= totalHeight;
+        }
+
+        plane.position.setY(y);
+      });
+
+      // スクロールオフセットをリセット（無限スクロール効果を維持）
+      if (Math.abs(this.scrollOffset) > this.planeSize) {
+        this.scrollOffset %= this.planeSize;
+      }
     }
+  }
+
+  updatePlanesSize() {
+    this.calculateAndSetPlaneSize();
+
+    this.planeArray.forEach((plane) => {
+      //plane.scale.set(1, 1, 1); // スケールをリセット
+      plane.geometry = new THREE.PlaneGeometry(this.planeSize, this.planeSize);
+    });
+
+    this.updatePlanesPosition();
   }
 
   // カメラの位置と向きを表示する関数
@@ -579,6 +540,21 @@ export default class ThreeApp {
     }
   }
 
+  setupScrollAnimation() {
+    ScrollTrigger.create({
+      trigger: document.body,
+      start: "top top",
+      end: "bottom bottom",
+      onUpdate: (self) => {
+        // スクロール量に基づいて回転角度を計算
+        const progress = self.progress;
+        this.planeRotationAngle = progress * Math.PI * 2; // 1回転
+        // プレーンの位置を更新
+        this.updatePlanesPosition();
+      },
+    });
+  }
+
   rotationPlanesByOrient(
     initialPosition: THREE.Vector3,
     rotationAngle: number
@@ -611,33 +587,18 @@ export default class ThreeApp {
   }
 
   private getAndSetIntersectPlanes(clientX: number, clientY: number): any[] {
-    if (!this.rect) return [];
-    if (
-      clientX < this.rect.width ||
-      clientY < (window.innerHeight - this.rect.height) / 2 ||
-      (window.innerHeight + this.rect.height) / 2 < clientY
-    )
-      return [];
     // スクリーン空間の座標系をレイキャスター用に正規化する（-1.0 ~ 1.0 の範囲）
     const x = (clientX / window.innerWidth) * 2.0 - 1.0;
     const y = (clientY / window.innerHeight) * 2.0 - 1.0;
-    const yOffSet =
-      ((window.innerHeight - this.rect.height) / 2 / window.innerHeight) * 2.0 -
-      1.0;
-    // レンダリング位置が変わったためもう一段階変換する
-    const canvasX = (x - 0.5) / 0.5;
-    const canvasY =
-      (y - yOffSet) / (this.rect.height / window.innerHeight) - 1.0;
-    // console.log(canvasX, canvasY);
     // スクリーン空間は上下が反転している点に注意（Y だけ符号を反転させる）
-    const v = new THREE.Vector2(canvasX, -canvasY);
+    const v = new THREE.Vector2(x, -y);
     // レイキャスターに正規化済みマウス座標とカメラを指定する
     this.raycaster.setFromCamera(v, this.camera);
     const intersects = this.raycaster.intersectObjects(this.planeArray);
 
     if (0 < intersects.length) {
       const intersectIndex = Number(intersects[0].object.name);
-      // console.log("intersected!", intersectIndex);
+      console.log("intersected!", intersectIndex);
       // クラスの呼び出し元から渡される関数を使用
       // &&で繋げているのは、関数の存在確認と関数の実行を同時に行なっている
       this.onIntersect && this.onIntersect(intersectIndex);

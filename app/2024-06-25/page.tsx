@@ -8,13 +8,14 @@ import styles from "./page.module.css";
 
 export default function Page() {
   const threeAppRef = useRef<ThreeApp | null>(null);
+  const webglContainerRef = useRef<HTMLDivElement>(null);
   const [selectedIndex, setSelectedIndex] = useState<number>(0);
 
   useEffect(() => {
     if (typeof window !== "undefined") {
       const wrapper = document.querySelector("#webgl");
       if (wrapper) {
-        const app = new ThreeApp(wrapper, (index) => {
+        const app = new ThreeApp(wrapper, webglContainerRef, (index) => {
           setSelectedIndex(index);
         });
         threeAppRef.current = app;
@@ -38,8 +39,10 @@ export default function Page() {
   }, []);
 
   return (
-    <div style={{ position: "relative" }}>
-      <div id="webgl"></div>
+    <div className={styles.container}>
+      <div ref={webglContainerRef} className={styles.webglContainer}>
+        <div id="webgl" className={styles.webglInner}></div>
+      </div>
       <InfoPanel selectedIndex={selectedIndex} isLandscape={true} />
     </div>
   );
