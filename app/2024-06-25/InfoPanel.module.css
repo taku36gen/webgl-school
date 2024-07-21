@@ -16,9 +16,9 @@
   padding: 30px;
   border-radius: 5px;
   box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
-  width: 93%; /* infoPanelContainerの幅に対する割合 */
+  width: 100%; /* infoPanelContainerの幅に対する割合 */
   height: 95vh;
-  max-height: 600px;
+  max-height: 650px;
   overflow-y: auto;
   pointer-events: auto;
   transition: all 0.3s ease;
@@ -26,12 +26,12 @@
 
 .landscapeContainer {
   justify-content: flex-end;
-  padding-left: 23%; /* 左側のパディングを調整 */
+  padding-left: 15%; /* 左側のパディングを調整 */
   padding-right: 2%; /* 右側のパディングを調整 */
 }
 
 .title {
-  font-size: 28px;
+  font-size: 24px;
   font-weight: bold;
   margin-bottom: 20px;
   color: #2c3e50;

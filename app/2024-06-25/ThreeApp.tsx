@@ -137,7 +137,7 @@ export default class ThreeApp {
   //////////////
   // 直線運動モード用
   scrollOffset: number = 0;
-  planeRelativeSize: number = 0.8; // プレーンの相対的なサイズ（画面の右半分の40%）
+  planeRelativeSize: number = 1.2; // プレーンの相対的なサイズ（画面の右半分の40%）
   //////////////
   // intersect関連
   intersects!: any[]; // 可変長配列の空配列の定義方法
@@ -245,7 +245,7 @@ export default class ThreeApp {
           if (this.renderer && this.camera && this.containerRef.current) {
             this.rect = this.containerRef.current.getBoundingClientRect();
             const width = this.rect.width;
-            const height = Math.min(this.rect.height, 600); // 最大高さを600pxに制限
+            const height = Math.min(this.rect.height, 650); // 最大高さを600pxに制限
 
             this.renderer.setSize(width, height);
             this.camera.aspect = width / height;
@@ -398,7 +398,7 @@ export default class ThreeApp {
       this.scene.add(this.planeGroup);
     } else if (this.planeMode == "straight" && this.rect) {
       // planeSizeの設定
-      this.planeSize = (this.rect.width / 2) * 0.9;
+      this.planeSize = (this.rect.width / 2) * this.planeRelativeSize;
       // console.log(this.planeSize);
       if (300 < this.planeSize) {
         this.planeSize = 300;
@@ -458,7 +458,10 @@ export default class ThreeApp {
     if (!this.planeArray || !this.rect) return;
     // planeSizeの設定
     const originalSize = this.planeSize; // 前のサイズを保持
-    this.planeSize = Math.min((this.rect.width / 2) * 0.9, 300);
+    this.planeSize = Math.min(
+      (this.rect.width / 2) * this.planeRelativeSize,
+      300
+    );
     this.planeArray.forEach((planeMesh, i) => {
       if (!this.rect) return;
       // サイズ更新

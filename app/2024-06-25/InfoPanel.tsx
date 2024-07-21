@@ -15,6 +15,18 @@ const InfoPanel: React.FC<InfoPanelProps> = ({
 }) => {
   const data: DiscographyData = ThreeApp.DISCOGRAPHY_DATA[selectedIndex];
 
+  // アーティストをroleごとにグループ化する関数
+  const groupArtistsByRole = (artists: { role: string; name: string }[]) => {
+    return artists.reduce((acc, artist) => {
+      if (!acc[artist.role]) {
+        acc[artist.role] = [];
+      }
+      acc[artist.role].push(artist.name);
+      return acc;
+    }, {} as { [key: string]: string[] });
+  };
+  const groupedArtists = groupArtistsByRole(data.feat);
+
   return (
     <div
       className={`${styles.infoPanelContainer} ${
@@ -31,11 +43,10 @@ const InfoPanel: React.FC<InfoPanelProps> = ({
 
         <div className={styles.infoSection}>
           <p className={styles.label}>Featured Artists:</p>
-          {data.feat.map((artist, index) => (
+          {Object.entries(groupedArtists).map(([role, names], index) => (
             <div key={index} className={styles.featArtist}>
               <p className={styles.content}>
-                <span className={styles.role}>{artist.role}:</span>{" "}
-                {artist.name}
+                <span className={styles.role}>{role}:</span> {names.join(", ")}
               </p>
             </div>
           ))}
