@@ -125,7 +125,7 @@ export default class ThreeApp {
   isTouch: boolean = false;
   isScroll: boolean = false;
   scrollEndTimer: number | null = null;
-  scrollSensitivity: number = 0.5;
+  scrollSensitivity: number = 0.9;
   windowOrient: string = "";
   textureLoader: THREE.TextureLoader = new THREE.TextureLoader();
   rect: DOMRect | undefined;
