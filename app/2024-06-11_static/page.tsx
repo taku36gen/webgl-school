@@ -4,8 +4,10 @@ import ThreeApp from "./ThreeApp";
 import { useEffect, useRef } from "react";
 import React from "react";
 import styles from "./page.module.css";
+import { redirect } from "next/navigation";
 
 export default function Page() {
+  redirect("/"); // ルートページにリダイレクト
   const threeAppRef = useRef<ThreeApp | null>(null);
 
   useEffect(() => {

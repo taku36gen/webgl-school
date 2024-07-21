@@ -40,14 +40,14 @@ export default class ThreeApp {
     height: 2,
   };
   static PLANE_MAT_PARAM = {
-    color: "#2c6512",
+    color: "#e7e628",
   };
-  static DISTANDE_FROM_SPHERE = 6;
+  static DISTANDE_FROM_SPHERE = 12;
   /**
    * 球体オブジェクトパラメータ
    */
   static SPHER_GEOM_PARAM = {
-    radius: 3,
+    radius: 9,
     widthSegments: 64,
     heightSegments: 32,
   };
@@ -174,7 +174,7 @@ export default class ThreeApp {
       this.planeArrowHelper = new THREE.ArrowHelper(
         this.planeCurrentDirection,
         this.planeMesh.position,
-        10,
+        5,
         0xff0029
       );
       this.scene.add(this.planeArrowHelper);
@@ -277,11 +277,7 @@ export default class ThreeApp {
       previousDirection.normalize();
 
       // 新しい位置を計算（球面上の点）
-      const newPosition = new THREE.Vector3(
-        Math.sin(this.rotationAngle) * ThreeApp.DISTANDE_FROM_SPHERE,
-        Math.sin(this.rotationAngle / 2) * ThreeApp.DISTANDE_FROM_SPHERE,
-        Math.cos(this.rotationAngle) * ThreeApp.DISTANDE_FROM_SPHERE
-      );
+      const newPosition = this.calculatePlanePosition(this.rotationAngle, "3");
 
       // 移動ベクトルを計算
       const moveVector = new THREE.Vector3().subVectors(
@@ -292,13 +288,10 @@ export default class ThreeApp {
 
       // 現在の進行方向を更新
       this.planeCurrentDirection.copy(moveVector);
-      // this.planeCurrentDirection.copy(
-      //   new THREE.Vector3(0.2, 0.3, 0.4).normalize()
-      // );
       this.planeCurrentDirection.normalize();
 
       // 新しい位置に移動
-      // this.planeMesh.position.copy(newPosition);
+      this.planeMesh.position.copy(newPosition);
       // (C) 変換前と変換後の２つのベクトルから外積で法線ベクトルを求める @@@
       const normalAxis = new THREE.Vector3().crossVectors(
         this.planeMesh.up,
@@ -314,15 +307,16 @@ export default class ThreeApp {
 
       // 求めた法線ベクトルとラジアンからクォータニオンを定義
       const qtn = new THREE.Quaternion().setFromAxisAngle(normalAxis, radians);
+      this.planeMesh.quaternion.copy(qtn);
       // 人工衛星の現在のクォータニオンに乗算する
       // console.log(this.planeMesh.quaternion);
-      this.planeMesh.quaternion.premultiply(qtn);
-      // console.log(this.planeMesh.up);
-      this.planeMesh.up.set(
-        this.planeCurrentDirection.x,
-        this.planeCurrentDirection.y,
-        this.planeCurrentDirection.z
-      );
+      // this.planeMesh.quaternion.premultiply(qtn);
+      // // console.log(this.planeMesh.up);
+      // this.planeMesh.up.set(
+      //   this.planeCurrentDirection.x,
+      //   this.planeCurrentDirection.y,
+      //   this.planeCurrentDirection.z
+      // );
       // console.log(this.planeMesh.up);
 
       // 飛行機の向きベクトルデバッグ用
@@ -330,8 +324,51 @@ export default class ThreeApp {
       this.planeArrowHelper.position.copy(this.planeMesh.position);
       this.planeArrowHelper.setDirection(this.planeCurrentDirection);
 
+      /**
+       * カメラの位置も更新する
+       */
+      const cameraPosition = this.planeMesh.position
+        .clone()
+        .multiplyScalar(1.8);
+      this.camera.position.copy(cameraPosition);
+      this.camera.lookAt(this.planeMesh.position);
+      this.camera.up.set(
+        this.planeCurrentDirection.x,
+        this.planeCurrentDirection.y,
+        this.planeCurrentDirection.z
+      );
+
       // レンダラーで描画
       this.renderer.render(this.scene, this.camera);
+    }
+  }
+
+  calculatePlanePosition(rotationAngle: number, mode: string): THREE.Vector3 {
+    if (mode == "1") {
+      const newPosition = new THREE.Vector3(
+        Math.sin(rotationAngle) * ThreeApp.DISTANDE_FROM_SPHERE,
+        Math.sin(rotationAngle / 2) * ThreeApp.DISTANDE_FROM_SPHERE,
+        Math.cos(rotationAngle) * ThreeApp.DISTANDE_FROM_SPHERE
+      );
+      return newPosition;
+    } else if (mode == "2") {
+      const newPosition = new THREE.Vector3(
+        0,
+        Math.sin(rotationAngle) * ThreeApp.DISTANDE_FROM_SPHERE,
+        Math.cos(rotationAngle) * ThreeApp.DISTANDE_FROM_SPHERE
+      );
+      return newPosition;
+    } else if (mode == "3") {
+      const phi = rotationAngle;
+      const theta = rotationAngle / 2;
+      const newPosition = new THREE.Vector3(
+        Math.sin(theta) * Math.cos(phi) * ThreeApp.DISTANDE_FROM_SPHERE,
+        Math.sin(theta) * Math.sin(phi) * ThreeApp.DISTANDE_FROM_SPHERE,
+        Math.cos(theta) * ThreeApp.DISTANDE_FROM_SPHERE
+      );
+      return newPosition;
+    } else {
+      return new THREE.Vector3(0, 0, 0);
     }
   }
 

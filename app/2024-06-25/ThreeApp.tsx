@@ -2,10 +2,7 @@
 
 import * as THREE from "three";
 import { OrbitControls } from "three/examples/jsm/controls/OrbitControls.js";
-import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader.js";
-import { DRACOLoader } from "three/examples/jsm/loaders/DRACOLoader.js";
 import gsap from "gsap";
-import { ScrollTrigger } from "gsap/ScrollTrigger";
 
 export default class ThreeApp {
   private containerRef: React.RefObject<HTMLDivElement>;
@@ -103,7 +100,6 @@ export default class ThreeApp {
       MV: "",
     },
   ];
-  static IMG_DATA_LIST: THREE.Texture[] = [];
 
   /**
    * プロパティ
@@ -112,14 +108,12 @@ export default class ThreeApp {
   renderer: THREE.WebGLRenderer | undefined;
   scene!: THREE.Scene;
   camera!: THREE.PerspectiveCamera;
-  orthograpohicCamera!: THREE.OrthographicCamera;
   previousPosition = new THREE.Vector3();
   directionalLight: THREE.DirectionalLight | undefined;
   ambientLight: THREE.AmbientLight | undefined;
   controls: OrbitControls | undefined;
   axesHelper: THREE.AxesHelper | undefined;
   models: THREE.Object3D[] = [];
-  clock: THREE.Clock | undefined;
   raycaster: THREE.Raycaster = new THREE.Raycaster();
   touchStartY: number | null = 0; // スマホ等タッチの開始点Y座標
   isTouch: boolean = false;
@@ -135,16 +129,17 @@ export default class ThreeApp {
   planeGeometry: THREE.BufferGeometry | undefined;
   planeArray: THREE.Mesh[] = [];
   planeGroup: THREE.Group = new THREE.Group();
-  material: THREE.MeshPhongMaterial = new THREE.MeshPhongMaterial();
-  imgMaterial: THREE.MeshPhongMaterial = new THREE.MeshPhongMaterial();
   planeArrowHelpers: THREE.Group = new THREE.Group();
   initialPositions: THREE.Vector3[] = [];
+  // 円運動モード用
   planesRadius: number = 0;
-  // 円運動モード用の回転角
   planeRotationAngle: number = 0;
-  // 直線運動モード用のスクロール量
+  //////////////
+  // 直線運動モード用
   scrollOffset: number = 0;
   planeRelativeSize: number = 0.8; // プレーンの相対的なサイズ（画面の右半分の40%）
+  //////////////
+  // intersect関連
   intersects!: any[]; // 可変長配列の空配列の定義方法
   planeIntersected: boolean = false;
   // 選択中のアルバムのインデックスを保持するための関数プロパティ
@@ -179,7 +174,6 @@ export default class ThreeApp {
     if (typeof window !== "undefined" && this.rect) {
       // 画面の縦長/横長を判定
       this.setOrientation();
-      // console.log(this.windowOrient);
 
       // window定義後に定義が必要な部分のみ、クラス定数の定義をクライアントサイドで行う
       /**
@@ -193,10 +187,6 @@ export default class ThreeApp {
       const color = new THREE.Color(ThreeApp.RENDERER_PARAM.clearColor);
       this.renderer = new THREE.WebGLRenderer();
       this.renderer.setClearColor(color);
-      // this.renderer.setSize(
-      //   ThreeApp.RENDERER_PARAM.width,
-      //   ThreeApp.RENDERER_PARAM.height
-      // );
       this.renderer.setSize(this.rect.width, this.rect.height);
       wrapper.appendChild(this.renderer.domElement);
 
@@ -558,11 +548,6 @@ export default class ThreeApp {
         this.previousPosition.copy(currentPosition);
       }
     }
-  }
-
-  addAxesHelper(object: THREE.Object3D, size = 1) {
-    const axesHelper = new THREE.AxesHelper(size);
-    object.add(axesHelper);
   }
 
   private setOrientation() {
