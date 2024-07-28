@@ -137,13 +137,13 @@ export default class ThreeApp {
   //////////////
   // 直線運動モード用
   scrollOffset: number = 0;
-  planeRelativeSize: number = 1.2; // プレーンの相対的なサイズ（画面の右半分の40%）
+  planeRelativeSize: number = 1.3; // プレーンの相対的なサイズ（画面の右半分の40%）
   //////////////
   // intersect関連
   intersects!: any[]; // 可変長配列の空配列の定義方法
   planeIntersected: boolean = false;
   selectedIndex: number | null = null; // 選択中のアルバムのインデックスを保持 // 最初はnull
-  highlightScale: number = 1.5; // ハイライト中の拡大スケール
+  highlightScale: number = 1.3; // ハイライト中の拡大スケール
   gsapTimeline: gsap.core.Timeline = gsap.timeline(); // gsapのタイムライン
   // 選択中のアルバムのインデックスを保持するための関数プロパティ
   // 関数自体はクラスの呼び出し元で定義しこのクラスに渡される。ここではその型定義のみしている
@@ -155,8 +155,6 @@ export default class ThreeApp {
   planeMode: string = "straight";
   // planeの一辺の値
   planeSize: number = 0;
-  // planeのx座標を保持しておく
-  planeCurrentX: number = 0;
 
   /**
    * コンストラクタ
@@ -317,15 +315,16 @@ export default class ThreeApp {
 
   private handleWheel(e: WheelEvent) {
     this.isScroll = true;
+    this.getAndSetIntersectPlanes(e.clientX, e.clientY);
     // console.log("scrolled!");
     if (this.planeIntersected) {
       e.preventDefault();
       // console.log(e.deltaY);
       this.planeRotationAngle += e.deltaY * this.scrollSensitivity; //円運動用
       this.scrollOffset += e.deltaY * this.scrollSensitivity; // 直線配置用
+      console.log(this.scrollOffset);
       this.updatePlanesPosition();
     }
-    this.getAndSetIntersectPlanes(e.clientX, e.clientY);
 
     // スクロール終了の検知
     if (this.scrollEndTimer !== null) {
@@ -337,7 +336,7 @@ export default class ThreeApp {
       this.scrollEndTimer = null;
       this.isScroll = false;
       // console.log("scrolleEnd...");
-    }, 150);
+    }, 300);
   }
 
   private handleTouchStart(e: TouchEvent) {
@@ -520,6 +519,14 @@ export default class ThreeApp {
         plane.position.set(movedPosition.x, movedPosition.y, movedPosition.z);
       });
     } else if (this.planeMode == "straight") {
+      // スクロールの制限（必要に応じて）
+      const totalHeight = (this.planeArray.length - 1) * this.planeSize;
+      const minScroll = 0;
+      const maxScroll = totalHeight;
+      this.scrollOffset = Math.max(
+        minScroll,
+        Math.min(maxScroll, this.scrollOffset)
+      );
       this.planeArray.forEach((plane, index) => {
         const initialY = this.initialPositions[index].y;
         const newY = initialY + this.scrollOffset; // マイナスに注意
@@ -530,15 +537,6 @@ export default class ThreeApp {
           ease: "power2.out", // イージング関数
         });
       });
-
-      // スクロールの制限（必要に応じて）
-      const totalHeight = (this.planeArray.length - 1) * this.planeSize;
-      const minScroll = 0;
-      const maxScroll = totalHeight;
-      this.scrollOffset = Math.max(
-        minScroll,
-        Math.min(maxScroll, this.scrollOffset)
-      );
     }
   }
   private setOrientation() {
@@ -620,15 +618,13 @@ export default class ThreeApp {
       this.planeIntersected = true;
       // 選ばれたインデックスをイライト用の関数に渡し実行する
       this.highlightAndSetSelectedPlane(intersectIndex, false);
-
-      console.log(intersectIndex);
     } else {
       this.planeIntersected = false;
       // 何もしない？
       this.highlightAndSetSelectedPlane(null, false);
     }
 
-    console.log(this.selectedIndex);
+    // console.log(this.selectedIndex);
     return intersects;
   }
 

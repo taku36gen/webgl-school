@@ -2,6 +2,7 @@
 const nextConfig = {
   reactStrictMode: true,
   webpack: (config) => {
+    // 3Dモデルファイル用
     config.module.rules.push({
       test: /\.(glb|gltf)$/,
       use: {
@@ -12,6 +13,11 @@ const nextConfig = {
           name: "[name].[ext]",
         },
       },
+    });
+    // シェーダファイル用
+    config.module.rules.push({
+      test: /\.glsl$/,
+      use: "raw-loader",
     });
     return config;
   },
