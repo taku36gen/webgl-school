@@ -10,6 +10,20 @@
 // れていきましょう。
 // ============================================================================
 
+// = 004 ======================================================================
+// このサンプルは、最初の状態では 003 とまったく同じ内容です。
+// これを、みなさん自身の手で修正を加えて「描かれる図形を五角形に」してみてくだ
+// さい。
+// そんなの余裕じゃろ～ と思うかも知れませんが……結構最初は難しく感じる人も多い
+// かもしれません。なお、正確な正五角形でなくても構いません。
+// ポイントは以下の点を意識すること！
+// * canvas 全体が XY 共に -1.0 ～ 1.0 の空間になっている
+// * gl.TRIANGLES では頂点３個がワンセットで１枚のポリゴンになる
+// * つまりいくつかの頂点は「まったく同じ位置に重複して配置される」ことになる
+// * 頂点座標だけでなく、頂点カラーも同じ個数分必要になる
+// * 物足りない人は、星型や円形などに挑戦してみてもいいかもしれません
+// ============================================================================
+
 // モジュールを読み込み
 import { WebGLUtility } from "../lib/webgl";
 import vertex from "./shaders/vert.glsl";
@@ -54,7 +68,13 @@ class App {
   startTime!: number; // レンダリング開始時のタイムスタンプ @@@
   isRendering!: boolean; // レンダリングを行うかどうかのフラグ @@@
 
+  previousVertexX!: number; // ポジション定義の時に使用する座標格納用変数
+  previousVertexY!: number; // ポジション定義の時に使用する座標格納用変数
+  polyValue: number = 5; // ポリゴンの角の数
+  sizeValue: number = 0.5; // ポリゴンの大きさ
+
   constructor() {
+    // console.log("App constructor called");
     if (window != undefined) {
       //アプリケーションのインスタンスを初期化し、必要なリソースをロードする
       (async () => {
@@ -63,14 +83,23 @@ class App {
         this.init();
         await this.load();
         // ロードが終わったら各種セットアップを行う
-        this.setupGeometry();
-        this.setupLocation();
+        await this.setupGeometry_task5();
+        await this.setupLocation();
         // すべてのセットアップが完了したら描画を開始する @@@
         this.start();
       })();
+      // this を固定するためのバインド処理
+      this.render = this.render.bind(this);
     }
-    // this を固定するためのバインド処理
-    this.render = this.render.bind(this);
+
+    window.addEventListener("resize", () => {
+      if (this.canvas && this.canvas instanceof HTMLCanvasElement) {
+        // canvas のサイズを設定
+        const size = Math.min(window.innerWidth, window.innerHeight);
+        this.canvas.width = size;
+        this.canvas.height = size;
+      }
+    });
   }
 
   /**
@@ -130,11 +159,108 @@ class App {
     });
   }
 
+  // = MY UPDATE ======================================================================
   /**
    * 頂点属性（頂点ジオメトリ）のセットアップを行う
    */
+  setupGeometry_task5() {
+    return new Promise<void>(async (resolve, reject) => {
+      // 頂点座標の定義
+      const n = this.polyValue;
+      const r = this.sizeValue;
+      const topPosition = [0, r, 0];
+      this.position = [];
+      // 頂点の色の定義
+      this.color = [];
+      for (let i = 1; i <= n; i++) {
+        // 最初の三角形の描画
+        if (i == 1) {
+          // 最初に原点を格納
+          this.position.push(0.0);
+          this.position.push(0.0);
+          this.position.push(0.0);
+          // 頂点の描画
+          topPosition.forEach((pos) => {
+            this.position.push(pos);
+          });
+          // 頂点から回転した座標
+          const x = r * Math.sin((2 * Math.PI) / n);
+          const y = r * Math.cos((2 * Math.PI) / n);
+          this.position.push(x);
+          this.position.push(y);
+          this.position.push(0);
+          // 回転した座標をインスタンス変数に保持しておく
+          this.previousVertexX = x;
+          this.previousVertexY = y;
+
+          // colorの設定
+          this.color.push(0.941, 0.322, 0.388, 1.0); // ピンク
+          this.color.push(0.475, 0.761, 0.278, 1.0); // ライムグリーン
+          this.color.push(0.204, 0.596, 0.859, 1.0); // スカイブルー
+        } else {
+          // 最初に原点を格納
+          this.position.push(0.0);
+          this.position.push(0.0);
+          this.position.push(0.0);
+          // 一つ前の座標を格納
+          this.position.push(this.previousVertexX);
+          this.position.push(this.previousVertexY);
+          this.position.push(0);
+          // 頂点から回転した座標
+          const x = r * Math.sin((i * 2 * Math.PI) / n);
+          const y = r * Math.cos((i * 2 * Math.PI) / n);
+          this.position.push(x);
+          this.position.push(y);
+          this.position.push(0);
+          // 回転した座標をインスタンス変数に保持しておく
+          this.previousVertexX = x;
+          this.previousVertexY = y;
+
+          // colorの設定
+          this.color.push(0.941, 0.322, 0.388, 1.0); // ピンク
+          this.color.push(0.475, 0.761, 0.278, 1.0); // ライムグリーン
+          this.color.push(0.204, 0.596, 0.859, 1.0); // スカイブルー
+        }
+      }
+
+      // 要素数は XYZ の３つ
+      this.positionStride = 3;
+      // VBO を生成
+      this.positionVBO = WebGLUtility.createVBO(this.gl, this.position);
+      // 要素数は RGBA の４つ
+      this.colorStride = 4;
+      // VBO を生成
+      this.colorVBO = WebGLUtility.createVBO(this.gl, this.color);
+
+      resolve();
+    });
+  }
+
+  /**
+   * 画面からの変数を受け取り描画を更新する関数
+   */
+  updatePolyValue(polyValue: number) {
+    this.polyValue = polyValue;
+    this.setupGeometry_task5();
+    this.setupLocation();
+    // this.render(); これを呼んだらバグった（this.uniformLocation.timeのuncaughtエラー）
+    //// 理由はちょっと不明だが。。一旦おいておく
+  }
+  updateSizeValue(sizeValue: number) {
+    this.sizeValue = sizeValue;
+    this.setupGeometry_task5();
+    this.setupLocation();
+    // this.render(); エラー。。同上
+  }
+
+  // ============================================================================
+
+  /**
+   * 課題5_多角形を作る
+   */
   setupGeometry() {
     // 頂点座標の定義
+    //// 二つ描画してみる
     this.position = [
       0.0,
       0.5,
@@ -145,6 +271,16 @@ class App {
       -0.5,
       -0.5,
       0.0, // みっつ目の頂点の x, y, z 座標
+      // 新しい三角形（上向き）
+      0.0,
+      -0.5,
+      0.0, // 頂点4: 下
+      0.5,
+      0.5,
+      0.0, // 頂点5: 右上
+      -0.5,
+      0.5,
+      0.0, // 頂点6: 左上
     ];
     // 要素数は XYZ の３つ
     this.positionStride = 3;
@@ -165,6 +301,19 @@ class App {
       0.0,
       1.0,
       1.0, // みっつ目の頂点の r, g, b, a カラー
+      // 新しい三角形の色
+      1.0,
+      1.0,
+      0.0,
+      1.0, // 黄
+      0.0,
+      1.0,
+      1.0,
+      1.0, // シアン
+      1.0,
+      0.0,
+      1.0,
+      1.0, // マゼンタ
     ];
     // 要素数は RGBA の４つ
     this.colorStride = 4;
@@ -176,32 +325,40 @@ class App {
    * 頂点属性のロケーションに関するセットアップを行う
    */
   setupLocation() {
-    const gl = this.gl;
-    // attribute location の取得
-    const positionAttributeLocation = gl.getAttribLocation(
-      this.program,
-      "position"
-    );
-    const colorAttributeLocation = gl.getAttribLocation(this.program, "color");
-    // WebGLUtility.enableBuffer は引数を配列で取る仕様なので、いったん配列に入れる
-    const vboArray = [this.positionVBO, this.colorVBO];
-    const attributeLocationArray = [
-      positionAttributeLocation,
-      colorAttributeLocation,
-    ];
-    const strideArray = [this.positionStride, this.colorStride];
-    // 頂点情報の有効化
-    WebGLUtility.enableBuffer(
-      gl,
-      vboArray,
-      attributeLocationArray,
-      strideArray
-    );
+    return new Promise<void>(async (resolve, reject) => {
+      const gl = this.gl;
+      // attribute location の取得
+      const positionAttributeLocation = gl.getAttribLocation(
+        this.program,
+        "position"
+      );
+      const colorAttributeLocation = gl.getAttribLocation(
+        this.program,
+        "color"
+      );
+      // WebGLUtility.enableBuffer は引数を配列で取る仕様なので、いったん配列に入れる
+      const vboArray = [this.positionVBO, this.colorVBO];
+      const attributeLocationArray = [
+        positionAttributeLocation,
+        colorAttributeLocation,
+      ];
+      const strideArray = [this.positionStride, this.colorStride];
+      // 頂点情報の有効化
+      WebGLUtility.enableBuffer(
+        gl,
+        vboArray,
+        attributeLocationArray,
+        strideArray
+      );
 
-    // uniform location の取得 @@@
-    this.uniformLocation = {
-      time: gl.getUniformLocation(this.program, "time"),
-    };
+      // uniform location の取得 @@@
+      this.uniformLocation = {
+        time: gl.getUniformLocation(this.program, "time"),
+      };
+
+      // 処理を完了
+      resolve();
+    });
   }
 
   /**
