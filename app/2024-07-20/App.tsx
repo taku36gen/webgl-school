@@ -12,6 +12,8 @@
 // してみると、意味がわかりやすいかもしれません。
 // ============================================================================
 
+// this is comment by project IDX with macbook
+
 // モジュールを読み込み
 import { WebGLUtility } from "../lib/webgl";
 import { Vec3, Mat4 } from "../lib/math.js";
