@@ -126,7 +126,7 @@ export default function Home() {
             </span>
           </h2>
           <p className="m-0 max-w-[30ch] text-sm opacity-50">
-            フラグメントシェーダでの陰影計算と光源
+            陰影計算を行うシェーダの違いによる陰影効果の違い
           </p>
         </Link>
       </div>
