@@ -15,14 +15,14 @@
 // this is comment by project IDX with macbook
 
 // モジュールを読み込み
-import { WebGLUtility } from "../lib/webgl";
+import { WebGLUtility } from "../lib/webgl.js";
 import { Vec3, Mat4 } from "../lib/math.js";
 import { WebGLGeometry } from "../lib/geometry.js";
 import { WebGLOrbitCamera } from "../lib/camera.js";
 import { Pane } from "../lib/tweakpane-4.0.3.min.js"; // tweakpane の読み込み @@@
 // シェーダの読み込み
-import vertex from "./shaders/vert.glsl";
-import fragment from "./shaders/frag.glsl";
+import vertex from "./shaders_vert/vert.glsl";
+import fragment from "./shaders_vert/frag.glsl";
 
 // インスタンス変数に必要な型定義
 interface TorusGeometry extends ReturnType<typeof WebGLGeometry.torus> {
@@ -90,9 +90,8 @@ class App {
     window.addEventListener("resize", () => {
       if (this.canvas && this.canvas instanceof HTMLCanvasElement) {
         // canvas のサイズを設定
-        const size = Math.min(window.innerWidth, window.innerHeight);
-        this.canvas.width = size;
-        this.canvas.height = size;
+        this.canvas.width = window.innerWidth / 2;
+        this.canvas.height = window.innerHeight;
       }
     });
   }
@@ -102,14 +101,13 @@ class App {
    */
   init() {
     // canvas エレメントの取得と WebGL コンテキストの初期化
-    this.canvas = document.getElementById("webgl-canvas");
+    this.canvas = document.getElementById("webgl-canvas-vert");
     // this.canvasに正常にcanvas要素が格納されたら...
     if (this.canvas && this.canvas instanceof HTMLCanvasElement) {
       this.gl = WebGLUtility.createWebGLContext(this.canvas);
       // canvas のサイズを設定
-      const size = Math.min(window.innerWidth, window.innerHeight);
-      this.canvas.width = size;
-      this.canvas.height = size;
+      this.canvas.width = window.innerWidth / 2;
+      this.canvas.height = window.innerHeight;
 
       // カメラ制御用インスタンスを生成する
       const cameraOption = {
@@ -171,8 +169,30 @@ class App {
    */
   setupPane() {
     return new Promise<void>(async (resolve, reject) => {
+      // canvas要素の取得
+      const canvas = document.getElementById(
+        "webgl-canvas-vert"
+      ) as HTMLCanvasElement;
+      if (!canvas) {
+        reject(new Error("Canvas element not found"));
+        return;
+      }
+
+      // canvasの位置とサイズを取得
+      const canvasRect = canvas.getBoundingClientRect();
+
+      // paneのコンテナ要素を作成
+      const paneContainer = document.createElement("div");
+      paneContainer.style.position = "absolute";
+      paneContainer.style.top = `${canvasRect.top + 10}px`;
+      paneContainer.style.left = `${canvasRect.left + 10}px`;
+      paneContainer.style.zIndex = "1000";
+      document.body.appendChild(paneContainer);
+
       // Tweakpane を使った GUI の設定
-      const pane = new Pane();
+      const pane = new Pane({
+        container: paneContainer,
+      });
       const parameter = {
         culling: true,
         depthTest: true,
@@ -376,7 +396,7 @@ class App {
     // ビュー・プロジェクション座標変換行列
     const v = this.camera.update();
     const fovy = 45;
-    const aspect = window.innerWidth / window.innerHeight;
+    const aspect = window.innerWidth / 2 / window.innerHeight;
     const near = 0.1;
     const far = 10.0;
     const p = Mat4.perspective(fovy, aspect, near, far);

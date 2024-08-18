@@ -1,36 +1,41 @@
 "use client";
 
-import App from "./App";
+import AppVert from "./App_vert";
+import AppFrag from "./App_frag";
 import { useEffect, useRef, useState } from "react";
 
 export default function Page() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
 
-  const appRef = useRef<App | null>(null); // クラスの参照を保持
+  const appVertRef = useRef<AppVert | null>(null); // クラスの参照を保持
+  const appFragRef = useRef<AppFrag | null>(null); // クラスの参照を保持
 
   useEffect(() => {
-    if (canvasRef.current && !appRef.current) {
+    if (canvasRef.current && !appVertRef.current && !appFragRef.current) {
       //OK console.log("check canvasRef");
       // const app = new App();
-      appRef.current = new App();
+      appVertRef.current = new AppVert();
+      appFragRef.current = new AppFrag();
     }
   }, [canvasRef]);
 
   return (
     <div
       style={{
-        position: "relative",
         width: "100%",
         height: "100vh",
         display: "flex", // 子要素の設定
-        justifyContent: "center", // 子要素の設定
-        alignItems: "center", // 子要素の設定
       }}
     >
       <canvas
-        id="webgl-canvas"
+        id="webgl-canvas-vert"
         ref={canvasRef}
-        style={{ position: "absolute" }}
+        style={{ width: "50%" }}
+      ></canvas>
+      <canvas
+        id="webgl-canvas-frag"
+        ref={canvasRef}
+        style={{ width: "50%" }}
       ></canvas>
     </div>
   );
